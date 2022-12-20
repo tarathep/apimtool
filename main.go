@@ -56,6 +56,7 @@ func main() {
 			{
 				if len(os.Args) > 2 && os.Args[2] == "parser" {
 					engine.ConfigParser(options.Environment, options.ApiID)
+
 				}
 			}
 		}

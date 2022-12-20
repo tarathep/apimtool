@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"log"
 	"os"
@@ -52,8 +54,41 @@ func generateCSV(outputPath string, api models.API) error {
 	return nil
 }
 
-func GetBackendIPfromURL(source bool, backendURL string) {
+func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return models.BackendTemplate{}, err
+	}
 
+	data := models.BackendTemplate{}
+	if err := json.Unmarshal([]byte(file), &data); err != nil {
+		return models.BackendTemplate{}, err
+	}
+
+	return data, nil
+}
+
+func getQuotedString(s string) []string {
+	ms := regexp.MustCompile(`'(.*?)'`).FindAllStringSubmatch(s, -1)
+	ss := make([]string, len(ms))
+
+	for i, m := range ms {
+		ss[i] = m[1]
+	}
+	return ss
+}
+
+func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, backendURL string) string {
+	for _, resource := range backendTemplate.Resources {
+		id := strings.ReplaceAll(getQuotedString(resource.Name)[1], "/", "")
+
+		if resource.Properties.URL == backendURL {
+			fmt.Println(id, resource.Properties.URL)
+			return id
+		}
+
+	}
+	return ""
 }
 
 func generateXMLApiPolicyHeaders(outputPath string, api models.API) error {
@@ -119,25 +154,45 @@ func generateConfigYML(outputPath string, api models.API) error {
 	return os.WriteFile(outputPath+"/config.yaml", data, 0644)
 }
 
+func checkPaths(paths []string) bool {
+	for _, checkdir := range paths {
+		if _, err := os.Stat(checkdir); os.IsNotExist(err) {
+			log.Println("directory " + checkdir + " not found!")
+			return false
+		}
+	}
+	return true
+}
+
 // Convert Configuration API JSON file to csv, apiPolicyHeader.xml
 func ConfigParser(env, apiId string) {
 
-	for _, checkdir := range []string{"apis/dev", "apim-dev", "apim-prd"} {
-		if _, err := os.Stat(checkdir); os.IsNotExist(err) {
-			fmt.Println("directory " + checkdir + " not found!")
-			return
-		}
-	}
-
-	api, _ := loadApi("./apis/" + env + "/" + apiId + ".json")
-	if len(api.Operations) == 0 {
-		log.Fatal("API config file not found")
+	//check path
+	if !checkPaths([]string{"apis/dev", "apim-dev", "apim-prd", "apim-dev/templates"}) {
 		return
 	}
-	outputPath := "apim-" + env + "/" + api.Apiname
-	os.Mkdir("apim-"+env+"/"+api.Apiname, 0755)
 
-	generateXMLApiPolicyHeaders(outputPath, api)
-	generateCSV(outputPath, api)
-	generateConfigYML(outputPath, api)
+	//pathAPIs := "./apis/" + env + "/" + apiId + ".json"
+	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
+
+	// api, _ := loadApi(pathAPIs)
+	// if len(api.Operations) == 0 {
+	// 	log.Fatal("API config file not found")
+	// 	return
+	// }
+
+	backend, _ := loadBackendTemplate(pathBackend)
+	if backend.ContentVersion == "" {
+		log.Fatal("backends.template.json not found")
+		return
+	}
+
+	getBackendIdfromURLsourceTemplate(backend, "https://app-sunatdav-az-usw3-dev-001.azurewebsites.net")
+
+	// outputPath := "apim-" + env + "/" + api.Apiname
+	// os.Mkdir("apim-"+env+"/"+api.Apiname, 0755)
+
+	// generateXMLApiPolicyHeaders(outputPath, api)
+	// generateCSV(outputPath, api)
+	// generateConfigYML(outputPath, api)
 }
