@@ -124,7 +124,7 @@ func ConfigParser(env, apiId string) {
 
 	for _, checkdir := range []string{"apis/dev", "apim-dev", "apim-prd"} {
 		if _, err := os.Stat(checkdir); os.IsNotExist(err) {
-			fmt.Println("directory" + checkdir + " not found!")
+			fmt.Println("directory " + checkdir + " not found!")
 			return
 		}
 	}
