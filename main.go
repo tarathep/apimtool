@@ -2,10 +2,15 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"time"
+
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/jessevdk/go-flags"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"github.com/tarathep/apimtool/engine"
 )
 
@@ -31,13 +36,19 @@ type Options struct {
 }
 
 func main() {
+	//init log
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
-	//engine.Execute()
+	log.Logger = log.With().Caller().Logger()
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 
 	var options Options
 	parser := flags.NewParser(&options, flags.PrintErrors|flags.PassDoubleDash)
 	if _, err := parser.Parse(); err != nil {
-		log.Fatal(err)
+		log.Error().Err(err)
+		color.New(color.FgHiRed).Println("Error")
+
 	}
 
 	flags.NewIniParser(parser)
@@ -55,8 +66,8 @@ func main() {
 		case "config":
 			{
 				if len(os.Args) > 2 && os.Args[2] == "parser" {
-					engine.ConfigParser(options.Environment, options.ApiID)
 
+					engine.ConfigParser(options.Environment, options.ApiID)
 				}
 			}
 		}

@@ -4,15 +4,16 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
-	"regexp"
+	"net/url"
 	"strings"
 
-	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/tarathep/apimtool/models"
 	"gopkg.in/yaml.v3"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Engine struct{}
@@ -68,34 +69,35 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 	return data, nil
 }
 
-func getQuotedString(s string) []string {
-	ms := regexp.MustCompile(`'(.*?)'`).FindAllStringSubmatch(s, -1)
-	ss := make([]string, len(ms))
-
-	for i, m := range ms {
-		ss[i] = m[1]
-	}
-	return ss
-}
-
 func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, backendURL string) string {
+
+	u, err := url.Parse(backendURL)
+	if err != nil {
+		log.Error().Err(err).Msg("error on parsing URL backend")
+		os.Exit(0)
+	}
+
 	for _, resource := range backendTemplate.Resources {
 		id := strings.ReplaceAll(getQuotedString(resource.Name)[1], "/", "")
 
+		port := ""
+		if u.Port() != "" {
+			port = ":" + u.Port()
+		}
+		backendURL = u.Scheme + "://" + u.Hostname() + port
+
 		if resource.Properties.URL == backendURL {
-			fmt.Println(id, resource.Properties.URL)
+			log.Debug().Str("id", id).Str("url", resource.Properties.URL).Msg("func getBackendIdfromURLsourceTemplate return")
 			return id
 		}
-
 	}
+
 	return ""
 }
 
-func generateXMLApiPolicyHeaders(outputPath string, api models.API) error {
+func generateXMLApiPolicyHeaders(outputPath string, api models.API, backendID string) error {
 	apiPolictXML := models.Policies{}
-
-	// where ip to set backend id name
-	apiPolictXML.Inbound.SetBackendService.BackendID = api.Policies.BackendURL
+	apiPolictXML.Inbound.SetBackendService.BackendID = backendID
 
 	for _, policyHeaders := range api.Policies.SetHeaders {
 		apiPolictXML.Inbound.SetHeader = append(apiPolictXML.Inbound.SetHeader, struct {
@@ -154,16 +156,6 @@ func generateConfigYML(outputPath string, api models.API) error {
 	return os.WriteFile(outputPath+"/config.yaml", data, 0644)
 }
 
-func checkPaths(paths []string) bool {
-	for _, checkdir := range paths {
-		if _, err := os.Stat(checkdir); os.IsNotExist(err) {
-			log.Println("directory " + checkdir + " not found!")
-			return false
-		}
-	}
-	return true
-}
-
 // Convert Configuration API JSON file to csv, apiPolicyHeader.xml
 func ConfigParser(env, apiId string) {
 
@@ -172,27 +164,27 @@ func ConfigParser(env, apiId string) {
 		return
 	}
 
-	//pathAPIs := "./apis/" + env + "/" + apiId + ".json"
+	pathAPIs := "./apis/" + env + "/" + apiId + ".json"
 	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
 
-	// api, _ := loadApi(pathAPIs)
-	// if len(api.Operations) == 0 {
-	// 	log.Fatal("API config file not found")
-	// 	return
-	// }
-
-	backend, _ := loadBackendTemplate(pathBackend)
-	if backend.ContentVersion == "" {
-		log.Fatal("backends.template.json not found")
+	api, _ := loadApi(pathAPIs)
+	if len(api.Operations) == 0 {
+		color.New(color.FgYellow).Println("API config file not found")
+		log.Logger.Warn().Msg("API config file not found")
 		return
 	}
 
-	getBackendIdfromURLsourceTemplate(backend, "https://app-sunatdav-az-usw3-dev-001.azurewebsites.net")
+	backend, _ := loadBackendTemplate(pathBackend)
+	if backend.ContentVersion == "" {
+		color.New(color.FgYellow).Println("backends.template.json not found")
+		log.Logger.Fatal().Msg("backends.template.json not found")
+		return
+	}
 
-	// outputPath := "apim-" + env + "/" + api.Apiname
-	// os.Mkdir("apim-"+env+"/"+api.Apiname, 0755)
+	outputPath := "apim-" + env + "/" + api.Apiname
+	os.Mkdir("apim-"+env+"/"+api.Apiname, 0755)
 
-	// generateXMLApiPolicyHeaders(outputPath, api)
-	// generateCSV(outputPath, api)
-	// generateConfigYML(outputPath, api)
+	generateXMLApiPolicyHeaders(outputPath, api, getBackendIdfromURLsourceTemplate(backend, api.Policies.BackendURL))
+	generateCSV(outputPath, api)
+	generateConfigYML(outputPath, api)
 }
