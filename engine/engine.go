@@ -69,6 +69,10 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 	return data, nil
 }
 
+func getBackendIdFromAPIM(backendURL string) string {
+	return ""
+}
+
 func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, backendURL string) string {
 
 	u, err := url.Parse(backendURL)
