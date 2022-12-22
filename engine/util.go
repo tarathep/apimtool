@@ -1,10 +1,12 @@
 package engine
 
 import (
-	"log"
 	"net/url"
 	"os"
 	"regexp"
+
+	"github.com/fatih/color"
+	"github.com/rs/zerolog/log"
 )
 
 func getQuotedString(s string) []string {
@@ -21,7 +23,8 @@ func getQuotedString(s string) []string {
 func checkPaths(paths []string) bool {
 	for _, checkdir := range paths {
 		if _, err := os.Stat(checkdir); os.IsNotExist(err) {
-			log.Println("directory " + checkdir + " not found!")
+			color.New(color.FgYellow).Println("directory " + checkdir + " not found!")
+			log.Logger.Warn().Msg("directory " + checkdir + " not found!")
 			return false
 		}
 	}
@@ -31,7 +34,8 @@ func checkPaths(paths []string) bool {
 func urlParse(url_ string) {
 	_, err := url.Parse(url_)
 	if err != nil {
-		log.Println(err)
+		color.New(color.FgRed).Println("URL Parsing Error")
+		log.Logger.Err(err).Msg("URL Parsing Error")
 	}
 
 }
