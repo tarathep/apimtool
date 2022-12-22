@@ -77,7 +77,7 @@ func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, b
 
 	u, err := url.Parse(backendURL)
 	if err != nil {
-		log.Error().Err(err).Msg("error on parsing URL backend")
+		log.Error().Str("func", "getBackendIdfromURLsourceTemplate").Err(err).Msg("error on parsing URL backend")
 		os.Exit(0)
 	}
 
@@ -91,10 +91,12 @@ func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, b
 		backendURL = u.Scheme + "://" + u.Hostname() + port
 
 		if resource.Properties.URL == backendURL {
-			log.Debug().Str("id", id).Str("url", resource.Properties.URL).Msg("func getBackendIdfromURLsourceTemplate return")
+			log.Debug().Str("func", "getBackendIdfromURLsourceTemplate").Msgf("Found ID=" + id)
 			return id
 		}
 	}
+
+	log.Debug().Str("func", "getBackendIdfromURLsourceTemplate").Msg("Not found")
 
 	return ""
 }
@@ -164,7 +166,7 @@ func generateConfigYML(outputPath string, api models.API) error {
 func ConfigParser(env, apiId string) {
 
 	//check path
-	if !checkPaths([]string{"apis/dev", "apim-dev", "apim-prd", "apim-dev/templates"}) {
+	if !checkPaths([]string{"apis/dev", "apim-dev/sources", "apim-prd", "apim-dev/templates"}) {
 		return
 	}
 
@@ -185,10 +187,12 @@ func ConfigParser(env, apiId string) {
 		return
 	}
 
-	outputPath := "apim-" + env + "/" + api.Apiname
-	os.Mkdir("apim-"+env+"/"+api.Apiname, 0755)
+	outputPath := "apim-" + env + "/sources/" + api.Apiname
+	os.Mkdir(outputPath, 0755)
 
-	generateXMLApiPolicyHeaders(outputPath, api, getBackendIdfromURLsourceTemplate(backend, api.Policies.BackendURL))
+	backendId := getBackendIdfromURLsourceTemplate(backend, api.Policies.BackendURL)
+
+	generateXMLApiPolicyHeaders(outputPath, api, backendId)
 	generateCSV(outputPath, api)
 	generateConfigYML(outputPath, api)
 }

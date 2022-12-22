@@ -63,6 +63,10 @@ func main() {
 
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
+		case "parse":
+			{
+				engine.ConfigParser(options.Environment, options.ApiID)
+			}
 		case "config":
 			{
 				if len(os.Args) > 2 && os.Args[2] == "parser" {
