@@ -109,10 +109,6 @@ func main() {
 						color.New(color.FgHiWhite).Print(" myservice ")
 						color.New(color.FgHiBlue).Print("--filter-display-name ")
 						color.New(color.FgHiWhite).Print(" myfilterdisplay\n\n")
-
-						color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
-						color.New(color.FgBlack).Print("Read more about the command in reference docs\n")
-
 					}
 				}
 				if len(os.Args) > 2 && os.Args[2] == "backend" {
@@ -122,6 +118,9 @@ func main() {
 						}
 					}
 				}
+				color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
+				color.New(color.FgBlack).Print("Read more about the command in reference docs\n")
+				return
 			}
 		case "config":
 			{
