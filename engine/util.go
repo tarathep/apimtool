@@ -37,5 +37,4 @@ func urlParse(url_ string) {
 		color.New(color.FgRed).Println("URL Parsing Error")
 		log.Logger.Err(err).Msg("URL Parsing Error")
 	}
-
 }

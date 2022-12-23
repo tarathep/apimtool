@@ -1,62 +1,112 @@
-// https://github.com/Azure-Samples/azure-sdk-for-go-samples/tree/main/sdk/resourcemanager/apimanagement
 package apim
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/apimanagement/armapimanagement"
+	"github.com/fatih/color"
 )
 
-var (
-	subscriptionID    = "24750e68-d6c2-40b7-90f9-f55b5009e909"
-	location          = "southeastasia"
-	resourceGroupName = "rg-tarathec-poc-az-asse-sbx-001"
-	serviceName       = "apimpocazassesbx003"
-)
-
-func Execute() {
-	// subscriptionID = os.Getenv("AZURE_SUBSCRIPTION_ID")
-	// if len(subscriptionID) == 0 {
-	// 	log.Fatal("AZURE_SUBSCRIPTION_ID is not set.")
-	// }
-
-	// cred, err := azidentity.NewDefaultAzureCredential(nil)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// ctx := context.Background()
-
-	// apiManagementService, err := getApiManagementService(ctx, cred)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Println("get api management service:", *apiManagementService.ID)
-
-	// //ExampleAPIClient_NewListByServicePager(ctx, cred)
-
-	// getApiOperationPolicy(ctx, cred, "echo-api", "create-resource")
+type APIM struct {
+	SubscriptionID string
+	Location       string
+	Credential     *azidentity.DefaultAzureCredential
+	Context        context.Context
 }
 
-func ExampleAPIClient_NewListByServicePager(ctx context.Context, cred azcore.TokenCredential) {
-	client, err := armapimanagement.NewAPIClient(subscriptionID, cred, nil)
+type Operation struct{}
+
+type Api struct {
+	Name        string
+	DisplayName string
+	Protocols   []string
+	Path        string
+	BackendURL  string
+}
+
+func Env() struct {
+	SubscriptionID string
+	Location       string
+} {
+	subscriptionID = os.Getenv("AZURE_SUBSCRIPTION_ID")
+	subscriptionID = "24750e68-d6c2-40b7-90f9-f55b5009e909"
+	if len(subscriptionID) == 0 {
+		log.Fatal("AZURE_SUBSCRIPTION_ID is not set.")
+	}
+	location = "southeastasia"
+
+	return struct {
+		SubscriptionID string
+		Location       string
+	}{SubscriptionID: subscriptionID, Location: location}
+}
+func (a APIM) getAPIs(resourceGroup, serviceName string, filter string) ([]Api, error) {
+	client, err := armapimanagement.NewAPIClient(a.SubscriptionID, a.Credential, nil)
 	if err != nil {
 		log.Fatalf("failed to create client: %v", err)
+		return []Api{}, err
 	}
 	pager := client.NewListByServicePager(resourceGroupName,
 		serviceName,
-		&armapimanagement.APIClientListByServiceOptions{Filter: nil,
+		&armapimanagement.APIClientListByServiceOptions{
+			Filter:              to.Ptr("contains(properties/displayName, '" + filter + "')"),
 			Top:                 nil,
 			Skip:                nil,
 			Tags:                nil,
 			ExpandAPIVersionSet: nil,
 		})
 
-	fmt.Println("-------------------------------")
+	apis := []Api{}
+
 	for pager.More() {
-		nextResult, err := pager.NextPage(ctx)
+		nextResult, err := pager.NextPage(a.Context)
+		if err != nil {
+			return []Api{}, err
+			log.Fatalf("failed to advance page: %v", err)
+		}
+
+		for _, v := range nextResult.Value {
+			_ = v
+
+			apis = append(apis, Api{
+				Name:        safePointerString(v.Name),
+				DisplayName: safePointerString(v.Properties.DisplayName),
+				Protocols: func() []string {
+					var ps []string
+					for _, p := range v.Properties.Protocols {
+						ps = append(ps, string(*p))
+					}
+					return ps
+				}(),
+				Path:       safePointerString(v.Properties.Path),
+				BackendURL: safePointerString(v.Properties.ServiceURL),
+			})
+		}
+	}
+	return apis, nil
+}
+
+func (apim APIM) ListBackend(resourceGroup, serviceName string) {
+	client, err := armapimanagement.NewBackendClient(apim.SubscriptionID, apim.Credential, nil)
+	if err != nil {
+		log.Fatalf("failed to create client: %v", err)
+	}
+
+	pager := client.NewListByServicePager(resourceGroupName,
+		serviceName,
+		&armapimanagement.BackendClientListByServiceOptions{
+			Filter: nil,
+			Top:    nil,
+			Skip:   nil,
+		})
+
+	for pager.More() {
+		nextResult, err := pager.NextPage(apim.Context)
 		if err != nil {
 			log.Fatalf("failed to advance page: %v", err)
 		}
@@ -65,98 +115,120 @@ func ExampleAPIClient_NewListByServicePager(ctx context.Context, cred azcore.Tok
 			// TODO: use page item
 			_ = v
 
-			fmt.Println("API Name : ", *v.Properties.DisplayName)
-			// fmt.Println(*v.Properties.Protocols[0])
-			// fmt.Println(*v.Properties.Path)
+			//fmt.Println("Backend ID : ", *v.ID)
+			fmt.Println("Backend NAME : ", *v.Name)
+			fmt.Println(*v.Properties.URL)
 
-			getApiOperation(ctx, cred, *v.Name)
 			fmt.Println("-------------------------------")
-
 		}
 	}
 }
 
-func getApiOperation(ctx context.Context, cred azcore.TokenCredential, apiID string) {
-	apiOperationClient, err := armapimanagement.NewAPIOperationClient(subscriptionID, cred, nil)
+func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, mode byte) {
 
+	color.New(color.Italic).Print("List API Management API's\n")
+
+	apis, err := apim.getAPIs(resourceGroup, serviceName, filterDisplayName)
 	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
+		color.New(color.FgRed).Println("Fail to get APIs", err)
+		return
 	}
-	pager := apiOperationClient.NewListByAPIPager(resourceGroupName, serviceName, apiID, &armapimanagement.APIOperationClientListByAPIOptions{
-		Filter: nil,
-		Top:    nil,
-		Skip:   nil,
-		Tags:   nil,
-	})
 
-	for pager.More() {
-		nextResult, err := pager.NextPage(ctx)
-		if err != nil {
-			log.Fatalf("failed to advance page: %v", err)
+	var (
+		maxApiNameSize, maxDisplayNameSize, maxProtocalSize, maxApiPathSize, maxApiBackendURLSize int
+	)
+
+	switch mode {
+	case 0:
+		{
+			if len(apis) == 0 {
+				color.New(color.FgHiBlue).Println("Not Found")
+				return
+			}
+			// find max len values for print
+			for _, api := range apis {
+				if len(api.Name) > maxApiNameSize {
+					maxApiNameSize = len(api.Name)
+				}
+
+				if len(api.DisplayName) > maxDisplayNameSize {
+					maxDisplayNameSize = len(api.DisplayName)
+				}
+
+				maxProtocalSizeT := func() int {
+					ps := ""
+					for _, p := range api.Protocols {
+						ps += " " + p
+					}
+					return len(ps)
+				}()
+
+				if maxProtocalSizeT > maxProtocalSize {
+					maxProtocalSize = maxProtocalSizeT
+				}
+
+				if len(api.Path) > maxApiPathSize {
+					maxApiPathSize = len(api.Path)
+				}
+
+				if len(api.BackendURL) > maxApiBackendURLSize {
+					maxApiBackendURLSize = len(api.BackendURL)
+				}
+			}
+			if maxApiNameSize < 4 {
+				maxApiNameSize = 4
+			}
+			if maxDisplayNameSize < 11 {
+				maxDisplayNameSize = 11
+			}
+			if maxProtocalSize < 11 {
+				maxProtocalSize = 11
+			}
+			if maxApiPathSize < 4 {
+				maxApiPathSize = 4
+			}
+			if maxApiBackendURLSize < 10 {
+				maxApiBackendURLSize = 10
+			}
+
+			color.New(color.FgHiMagenta).Printf("%*s  %*s  %*s  %*s  %*s  %*s\n", 3, "No.", maxApiNameSize, "NAME", maxDisplayNameSize, "DisplayName", maxProtocalSize, "Protocol(s)", maxApiPathSize, "Path", maxApiBackendURLSize, "BackendURL")
+			for i, api := range apis {
+				color.New(color.FgHiWhite).Printf("%*d  %*s  %*s  %*s  %*s  %*s\n", 3, (i + 1), maxApiNameSize, api.Name, maxDisplayNameSize, api.DisplayName, maxProtocalSize, func() string {
+					ps := ""
+					for _, p := range api.Protocols {
+						ps += " " + p
+					}
+					return ps
+				}(), maxApiPathSize, api.Path, maxApiBackendURLSize, api.BackendURL)
+			}
 		}
-		for _, v := range nextResult.Value {
-			// TODO: use page item
-			_ = v
+	case 1:
+		{
+			for i, api := range apis {
+				color.New(color.FgBlue).Print("No : ")
+				color.New(color.FgWhite).Println(1 + i)
+				color.New(color.FgCyan).Print("API NAME : ")
+				color.New(color.FgWhite).Println(api.Name)
+				color.New(color.FgGreen).Print("API DISPLAY NAME : ")
+				color.New(color.FgWhite).Println(api.DisplayName)
+				color.New(color.FgHiMagenta).Print("PROTOCOL(s) : ")
+				color.New(color.FgWhite).Println(api.Protocols)
+				color.New(color.FgHiRed).Print("PATH : ")
+				color.New(color.FgWhite).Println(api.Path)
+				color.New(color.FgHiBlack).Print("Backend URL : ")
+				color.New(color.FgWhite).Println(api.BackendURL)
+				color.New(color.FgHiWhite).Println("------------------------------------------------------------")
 
-			fmt.Println(*v.Properties.Method, *v.Name)
-
+			}
 		}
 	}
 
 }
-func getApiOperationPolicy(ctx context.Context, cred azcore.TokenCredential, apiID string, operationID string) {
-	apiOperationPolicyClient, err := armapimanagement.NewAPIOperationPolicyClient(subscriptionID, cred, nil)
-
-	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
+func safePointerString(s *string) string {
+	if s == nil {
+		temp := "" // *string cannot be initialized
+		s = &temp  // in one statement
 	}
-
-	listOperation, err := apiOperationPolicyClient.ListByOperation(ctx, resourceGroupName, serviceName, apiID, operationID, &armapimanagement.APIOperationPolicyClientListByOperationOptions{})
-	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
-	}
-	for _, v := range listOperation.Value {
-
-		fmt.Println(*v.Properties.Value)
-	}
-}
-
-// The resource type 'getDomainOwnershipIdentifier' could not be found in the namespace 'Microsoft.ApiManagement' for api version '2021-04-01-preview'. The supported api-versions are '2020-12-01,2021-01-01-preview'."}
-func getDomainOwnershipIdentifier(ctx context.Context, cred azcore.TokenCredential) (*armapimanagement.ServiceGetDomainOwnershipIdentifierResult, error) {
-	apiManagementServiceClient, err := armapimanagement.NewServiceClient(subscriptionID, cred, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := apiManagementServiceClient.GetDomainOwnershipIdentifier(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &resp.ServiceGetDomainOwnershipIdentifierResult, nil
-}
-
-func getSsoToken(ctx context.Context, cred azcore.TokenCredential) (*armapimanagement.ServiceGetSsoTokenResult, error) {
-	apiManagementServiceClient, err := armapimanagement.NewServiceClient(subscriptionID, cred, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := apiManagementServiceClient.GetSsoToken(ctx, resourceGroupName, serviceName, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &resp.ServiceGetSsoTokenResult, nil
-}
-
-func getApiManagementService(ctx context.Context, cred azcore.TokenCredential) (*armapimanagement.ServiceResource, error) {
-	apiManagementServiceClient, err := armapimanagement.NewServiceClient(subscriptionID, cred, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := apiManagementServiceClient.Get(ctx, resourceGroupName, serviceName, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &resp.ServiceResource, nil
+	value := *s // safe to dereference the *string
+	return value
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -70,6 +71,8 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 }
 
 func getBackendIdFromAPIM(backendURL string) string {
+	fmt.Println(backendURL)
+
 	return ""
 }
 
@@ -191,8 +194,10 @@ func ConfigParser(env, apiId string) {
 	os.Mkdir(outputPath, 0755)
 
 	backendId := getBackendIdfromURLsourceTemplate(backend, api.Policies.BackendURL)
+	getBackendIdFromAPIM(api.Policies.BackendURL)
 
 	generateXMLApiPolicyHeaders(outputPath, api, backendId)
 	generateCSV(outputPath, api)
 	generateConfigYML(outputPath, api)
+
 }
