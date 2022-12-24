@@ -148,7 +148,7 @@ func main() {
 	color.New(color.FgHiWhite).Print("To support configuration of Microsoft Azure API Management\nUse `apimtool --version` to display the current version.\n")
 	color.New(color.FgHiWhite).Print("Here are the base commands:\n\n")
 
-	color.New(color.FgHiWhite).Print("\tparse \t: Generage Configuration files to Source files for support Deploy ARM templates via pipeline\n")
+	color.New(color.FgHiWhite).Print("\tparse \t: Parsing Configuration files to Source files for support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
 	color.New(color.FgHiWhite).Print("\tapim \t: Manage Azure API Management services.\n\n")
 
 	color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
