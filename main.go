@@ -17,7 +17,7 @@ import (
 	"github.com/tarathep/apimtool/engine"
 )
 
-const version string = "v0.0.1"
+const version string = "0.0.1"
 const label string = `Azure API Management Tool ` + version + `
 Repository : https://github.com/tarathep/apimtool`
 
@@ -60,7 +60,8 @@ func main() {
 	flags.NewIniParser(parser)
 
 	if options.Version {
-		fmt.Print(version)
+		fmt.Print("apimtool version " + version)
+		return
 	}
 
 	if options.Helps {
@@ -96,8 +97,9 @@ func main() {
 							apim.ListAPI(options.ResourceGroup, options.ServiceName, options.FilterDisplayName, 1)
 							return
 						}
+						color.New(color.FgHiRed).Print("the following arguments are required: --resource-group/-g, --service-name/-n\n")
 
-						color.New(color.FgHiWhite).Print("\n\nExamples from AI knowledge base:\n")
+						color.New(color.FgHiWhite).Print("\nExamples:\n")
 						color.New(color.FgHiBlue).Print("apimtool apim api list --resource-group ")
 						color.New(color.FgHiWhite).Print("myresourcegroup ")
 						color.New(color.FgHiBlue).Print("--service-name ")
@@ -119,7 +121,7 @@ func main() {
 					}
 				}
 				color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
-				color.New(color.FgBlack).Print("Read more about the command in reference docs\n")
+				color.New(color.FgHiBlack).Print("Read more about the command in reference docs\n")
 				return
 			}
 		case "config":
@@ -135,20 +137,20 @@ func main() {
 	}
 
 	fmt.Println(`
-	 _   ___ ___ __  __   _____ ___   ___  _    
-	/_\ | _ \_ _|  \/  | |_   _/ _ \ / _ \| |   
-       / _ \|  _/| || |\/| |   | || (_) | (_) | |__ 
-      /_/ \_\_| |___|_|  |_|   |_| \___/ \___/|____|
+    _   ___ ___ __  __   _____ ___   ___  _
+   /_\ | _ \_ _|  \/  | |_   _/ _ \ / _ \| |
+  / _ \|  _/| || |\/| |   | || (_) | (_) | |__
+ /_/ \_\_| |___|_|  |_|   |_| \___/ \___/|____|
 												`)
 
-	color.New(color.FgHiWhite).Print("Welcome to the APIM Tool CLI!\n")
+	color.New(color.FgHiWhite).Print("\nWelcome to the APIM Tool CLI!\n")
 
-	color.New(color.FgHiWhite).Print("To support configuration Microsoft Azure API Managment\nUse `apimtool --version` to display the current version.\n")
+	color.New(color.FgHiWhite).Print("To support configuration of Microsoft Azure API Management\nUse `apimtool --version` to display the current version.\n")
 	color.New(color.FgHiWhite).Print("Here are the base commands:\n\n")
 
 	color.New(color.FgHiWhite).Print("\tparse \t: Generage Configuration files to Source files for support Deploy ARM templates via pipeline\n")
 	color.New(color.FgHiWhite).Print("\tapim \t: Manage Azure API Management services.\n\n")
 
 	color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
-	color.New(color.FgBlack).Print("Read more about the command in reference docs\n")
+	color.New(color.FgHiBlack).Print("Read more about the command in reference docs\n")
 }
