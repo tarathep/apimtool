@@ -39,6 +39,8 @@ type Options struct {
 	Helps   bool   `long:"help" description:"help"`
 	Token   string `long:"token" description:"Personal Access Token"`
 	Logging bool   `long:"logging" description:"Console log"`
+
+	Option string `short:"o" long:"option" description:"Option"`
 }
 
 func main() {
@@ -94,34 +96,28 @@ func main() {
 				if len(os.Args) > 2 && os.Args[2] == "api" {
 					if len(os.Args) > 3 && os.Args[3] == "list" {
 						if options.ResourceGroup != "" && options.ServiceName != "" {
-							apim.ListAPI(options.ResourceGroup, options.ServiceName, options.FilterDisplayName, 1)
+							apim.ListAPI(options.ResourceGroup, options.ServiceName, options.FilterDisplayName, options.Option)
 							return
 						}
-						color.New(color.FgHiRed).Print("the following arguments are required: --resource-group/-g, --service-name/-n\n")
 
-						color.New(color.FgHiWhite).Print("\nExamples:\n")
-						color.New(color.FgHiBlue).Print("apimtool apim api list --resource-group ")
-						color.New(color.FgHiWhite).Print("myresourcegroup ")
-						color.New(color.FgHiBlue).Print("--service-name ")
-						color.New(color.FgHiWhite).Print(" myservice\n\n")
+						printExCommand("--resource-group/-g, --service-name/-n", true, "apimtool apim api list --resource-group", "myresourcegroup", "--service-name", "myservice")
+						printExCommand("", false, "apimtool apim api list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay")
+						printExCommand("", false, "apimtool apim api list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay", "--option", "table/list")
 
-						color.New(color.FgHiBlue).Print("apimtool apim api list --resource-group ")
-						color.New(color.FgHiWhite).Print("myresourcegroup ")
-						color.New(color.FgHiBlue).Print("--service-name ")
-						color.New(color.FgHiWhite).Print(" myservice ")
-						color.New(color.FgHiBlue).Print("--filter-display-name ")
-						color.New(color.FgHiWhite).Print(" myfilterdisplay\n\n")
 					}
 				}
 				if len(os.Args) > 2 && os.Args[2] == "backend" {
 					if len(os.Args) > 3 && os.Args[3] == "list" {
 						if options.ResourceGroup != "" && options.ServiceName != "" {
-							apim.ListBackend(options.ResourceGroup, options.ServiceName)
+							apim.ListBackend(options.ResourceGroup, options.ServiceName, options.FilterDisplayName, options.Option)
+							return
 						}
+						printExCommand("--resource-group/-g, --service-name/-n", true, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice")
+						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay")
+						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay", "--option", "table/list")
 					}
 				}
-				color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
-				color.New(color.FgHiBlack).Print("Read more about the command in reference docs\n")
+				printLast()
 				return
 			}
 		case "config":
@@ -151,6 +147,30 @@ func main() {
 	color.New(color.FgHiWhite).Print("\tparse \t: Parsing Configuration files to Source files for support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
 	color.New(color.FgHiWhite).Print("\tapim \t: Manage Azure API Management services.\n\n")
 
+	printLast()
+
+}
+
+func printExCommand(req string, header bool, options ...string) {
+	if req != "" {
+		color.New(color.FgHiRed).Print("the following arguments are required: " + req + "\n")
+	}
+
+	if header {
+		color.New(color.FgHiWhite).Print("\nExamples:\n")
+	}
+	for i, option := range options {
+		if (i % 2) == 0 {
+			color.New(color.FgHiBlue).Print(option)
+		} else {
+			color.New(color.FgHiWhite).Print(option)
+		}
+		fmt.Print(" ")
+	}
+	fmt.Print("\n\n")
+}
+
+func printLast() {
 	color.New(color.FgCyan).Print("https://github.com/tarathep/apimtool\n")
 	color.New(color.FgHiBlack).Print("Read more about the command in reference docs\n")
 }

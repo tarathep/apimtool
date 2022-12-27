@@ -70,57 +70,57 @@ func ExampleAPIClient_NewListByServicePager(ctx context.Context, cred azcore.Tok
 			// fmt.Println(*v.Properties.Protocols[0])
 			// fmt.Println(*v.Properties.Path)
 
-			getApiOperation(ctx, cred, *v.Name)
+			//getApiOperation(ctx, cred, *v.Name)
 			fmt.Println("-------------------------------")
 
 		}
 	}
 }
 
-func getApiOperation(ctx context.Context, cred azcore.TokenCredential, apiID string) {
-	apiOperationClient, err := armapimanagement.NewAPIOperationClient(subscriptionID, cred, nil)
+// func getApiOperation(ctx context.Context, cred azcore.TokenCredential, apiID string) {
+// 	apiOperationClient, err := armapimanagement.NewAPIOperationClient(subscriptionID, cred, nil)
 
-	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
-	}
-	pager := apiOperationClient.NewListByAPIPager(resourceGroupName, serviceName, apiID, &armapimanagement.APIOperationClientListByAPIOptions{
-		Filter: nil,
-		Top:    nil,
-		Skip:   nil,
-		Tags:   nil,
-	})
+// 	if err != nil {
+// 		log.Fatalf("failed to create client: %v", err)
+// 	}
+// 	pager := apiOperationClient.NewListByAPIPager(resourceGroupName, serviceName, apiID, &armapimanagement.APIOperationClientListByAPIOptions{
+// 		Filter: nil,
+// 		Top:    nil,
+// 		Skip:   nil,
+// 		Tags:   nil,
+// 	})
 
-	for pager.More() {
-		nextResult, err := pager.NextPage(ctx)
-		if err != nil {
-			log.Fatalf("failed to advance page: %v", err)
-		}
-		for _, v := range nextResult.Value {
-			// TODO: use page item
-			_ = v
+// 	for pager.More() {
+// 		nextResult, err := pager.NextPage(ctx)
+// 		if err != nil {
+// 			log.Fatalf("failed to advance page: %v", err)
+// 		}
+// 		for _, v := range nextResult.Value {
+// 			// TODO: use page item
+// 			_ = v
 
-			fmt.Println("\t", *v.Properties.Method, *v.Name)
+// 			fmt.Println("\t", *v.Properties.Method, *v.Name)
 
-		}
-	}
+// 		}
+// 	}
+// }
 
-}
-func getApiOperationPolicy(ctx context.Context, cred azcore.TokenCredential, apiID string, operationID string) {
-	apiOperationPolicyClient, err := armapimanagement.NewAPIOperationPolicyClient(subscriptionID, cred, nil)
+// func getApiOperationPolicy(ctx context.Context, cred azcore.TokenCredential, apiID string, operationID string) {
+// 	apiOperationPolicyClient, err := armapimanagement.NewAPIOperationPolicyClient(subscriptionID, cred, nil)
 
-	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
-	}
+// 	if err != nil {
+// 		log.Fatalf("failed to create client: %v", err)
+// 	}
 
-	listOperation, err := apiOperationPolicyClient.ListByOperation(ctx, resourceGroupName, serviceName, apiID, operationID, &armapimanagement.APIOperationPolicyClientListByOperationOptions{})
-	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
-	}
-	for _, v := range listOperation.Value {
+// 	listOperation, err := apiOperationPolicyClient.ListByOperation(ctx, resourceGroupName, serviceName, apiID, operationID, &armapimanagement.APIOperationPolicyClientListByOperationOptions{})
+// 	if err != nil {
+// 		log.Fatalf("failed to create client: %v", err)
+// 	}
+// 	for _, v := range listOperation.Value {
 
-		fmt.Println(*v.Properties.Value)
-	}
-}
+// 		fmt.Println(*v.Properties.Value)
+// 	}
+// }
 
 // The resource type 'getDomainOwnershipIdentifier' could not be found in the namespace 'Microsoft.ApiManagement' for api version '2021-04-01-preview'. The supported api-versions are '2020-12-01,2021-01-01-preview'."}
 func getDomainOwnershipIdentifier(ctx context.Context, cred azcore.TokenCredential) (*armapimanagement.ServiceGetDomainOwnershipIdentifierResult, error) {

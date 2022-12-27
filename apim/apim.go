@@ -2,7 +2,6 @@ package apim
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -19,7 +18,11 @@ type APIM struct {
 	Context        context.Context
 }
 
-type Operation struct{}
+type Operation struct {
+	Method      string
+	Name        string
+	URLTemplate string
+}
 
 type Api struct {
 	Name        string
@@ -27,6 +30,11 @@ type Api struct {
 	Protocols   []string
 	Path        string
 	BackendURL  string
+}
+
+type Backend struct {
+	Name string
+	URL  string
 }
 
 func Env() struct {
@@ -45,10 +53,85 @@ func Env() struct {
 		Location       string
 	}{SubscriptionID: subscriptionID, Location: location}
 }
+
+func (a APIM) getOperationPolicy(resourceGroup, serviceName string, apiID string, operationID string) ([]string, error) {
+
+	var operationPolicies []string
+
+	apiOperationPolicyClient, err := armapimanagement.NewAPIOperationPolicyClient(a.SubscriptionID, a.Credential, nil)
+	if err != nil {
+		log.Println("failed to create client: %v", err)
+		return nil, err
+	}
+
+	listOperation, err := apiOperationPolicyClient.ListByOperation(a.Context, resourceGroupName, serviceName, apiID, operationID, &armapimanagement.APIOperationPolicyClientListByOperationOptions{})
+	if err != nil {
+		log.Println("failed to create client: %v", err)
+		return nil, err
+	}
+	for _, v := range listOperation.Value {
+		operationPolicies = append(operationPolicies, string(*v.Properties.Value))
+	}
+	return operationPolicies, nil
+}
+
+func (a APIM) getOperations(resourceGroup, serviceName string, apiID string, filter string) ([]Operation, error) {
+	apiOperationClient, err := armapimanagement.NewAPIOperationClient(a.SubscriptionID, a.Credential, nil)
+	if err != nil {
+		log.Fatalf("failed to create client: %v", err)
+	}
+	pager := apiOperationClient.NewListByAPIPager(resourceGroupName, serviceName, apiID, &armapimanagement.APIOperationClientListByAPIOptions{
+		Filter: nil,
+		Top:    nil,
+		Skip:   nil,
+		Tags:   nil,
+	})
+
+	var operations []Operation
+
+	for pager.More() {
+		nextResult, err := pager.NextPage(a.Context)
+		if err != nil {
+			log.Fatalf("failed to advance page: %v", err)
+		}
+		for _, v := range nextResult.Value {
+			operations = append(operations, Operation{
+				Method:      string(*v.Properties.Method),
+				Name:        string(*v.Name),
+				URLTemplate: string(*v.Properties.URLTemplate),
+			})
+		}
+	}
+	return operations, nil
+}
+
+func (a APIM) getAPIPolicy(resourceGroup, serviceName string, apiID string) ([]string, error) {
+
+	var apiPolicies []string
+
+	apiOperationPolicyClient, err := armapimanagement.NewAPIPolicyClient(a.SubscriptionID, a.Credential, nil)
+	if err != nil {
+		log.Println("failed to create client: %v", err)
+		return nil, err
+	}
+
+	apiPolicyClientListByAPIResponse, err := apiOperationPolicyClient.ListByAPI(a.Context, resourceGroup, serviceName, apiID, &armapimanagement.APIPolicyClientListByAPIOptions{})
+	if err != nil {
+		log.Println("failed to create client: %v", err)
+		return nil, err
+	}
+
+	for _, ps := range apiPolicyClientListByAPIResponse.Value {
+		apiPolicies = append(apiPolicies, safePointerString(ps.Properties.Value))
+	}
+
+	return apiPolicies, err
+}
+
 func (a APIM) getAPIs(resourceGroup, serviceName string, filter string) ([]Api, error) {
 	client, err := armapimanagement.NewAPIClient(a.SubscriptionID, a.Credential, nil)
 	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
+		log.Println("failed to create client: %v", err)
 		return []Api{}, err
 	}
 	pager := client.NewListByServicePager(resourceGroupName,
@@ -91,22 +174,25 @@ func (a APIM) getAPIs(resourceGroup, serviceName string, filter string) ([]Api, 
 	return apis, nil
 }
 
-func (apim APIM) ListBackend(resourceGroup, serviceName string) {
-	client, err := armapimanagement.NewBackendClient(apim.SubscriptionID, apim.Credential, nil)
+func (a APIM) getBackends(resourceGroup, serviceName string, filter string) ([]Backend, error) {
+	client, err := armapimanagement.NewBackendClient(a.SubscriptionID, a.Credential, nil)
 	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
+		log.Println("failed to create client: %v", err)
+		return []Backend{}, err
 	}
 
 	pager := client.NewListByServicePager(resourceGroupName,
 		serviceName,
 		&armapimanagement.BackendClientListByServiceOptions{
-			Filter: nil,
+			Filter: to.Ptr("contains(properties/url, '" + filter + "')"),
 			Top:    nil,
 			Skip:   nil,
 		})
 
+	backends := []Backend{}
+
 	for pager.More() {
-		nextResult, err := pager.NextPage(apim.Context)
+		nextResult, err := pager.NextPage(a.Context)
 		if err != nil {
 			log.Fatalf("failed to advance page: %v", err)
 		}
@@ -116,15 +202,80 @@ func (apim APIM) ListBackend(resourceGroup, serviceName string) {
 			_ = v
 
 			//fmt.Println("Backend ID : ", *v.ID)
-			fmt.Println("Backend NAME : ", *v.Name)
-			fmt.Println(*v.Properties.URL)
-
-			fmt.Println("-------------------------------")
+			backends = append(backends, Backend{
+				Name: string(*v.Name),
+				URL:  string(*v.Properties.URL),
+			})
 		}
 	}
+	return backends, err
 }
 
-func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, mode byte) {
+func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName string, option string) {
+	color.New(color.Italic).Print("List Backend's\n")
+
+	backends, err := apim.getBackends(resourceGroup, serviceName, filterDisplayName)
+	if err != nil {
+		color.New(color.FgRed).Println("Fail to get APIs", err)
+		return
+	}
+
+	var (
+		maxNameSize, maxBackendURLSize int
+	)
+	if option == "" {
+		option = "table"
+	}
+
+	switch option {
+	case "table":
+		{
+			if len(backends) == 0 {
+				color.New(color.FgHiBlue).Println("Not Found")
+				return
+			}
+			// find max len values for print
+			for _, backend := range backends {
+				if len(backend.Name) > maxNameSize {
+					maxNameSize = len(backend.Name)
+				}
+
+				if len(backend.URL) > maxBackendURLSize {
+					maxBackendURLSize = len(backend.URL)
+				}
+
+			}
+			if maxNameSize < 4 {
+				maxNameSize = 4
+			}
+
+			if maxBackendURLSize < 10 {
+				maxBackendURLSize = 10
+			}
+
+			color.New(color.FgHiMagenta).Printf("%*s  %*s  %*s\n", 3, "No.", maxNameSize, "NAME", maxBackendURLSize, "BackendURL")
+			for i, backend := range backends {
+				color.New(color.FgHiWhite).Printf("%*d  %*s  %*s\n", 3, (i + 1), maxNameSize, backend.Name, maxBackendURLSize, backend.URL)
+			}
+		}
+	case "list":
+		{
+			for i, backend := range backends {
+				color.New(color.FgHiBlack).Print("No : ")
+				color.New(color.FgWhite).Println(1 + i)
+				color.New(color.FgHiBlack).Print("BACKEND NAME : ")
+				color.New(color.FgWhite).Println(backend.Name)
+				color.New(color.FgHiBlack).Print("BACKEND URL : ")
+				color.New(color.FgWhite).Println(backend.URL)
+				color.New(color.FgHiWhite).Println("------------------------------------------------------------")
+			}
+
+		}
+	}
+
+}
+
+func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, option string) {
 
 	color.New(color.Italic).Print("List API Management API's\n")
 
@@ -137,9 +288,12 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, m
 	var (
 		maxApiNameSize, maxDisplayNameSize, maxProtocalSize, maxApiPathSize, maxApiBackendURLSize int
 	)
+	if option == "" {
+		option = "table"
+	}
 
-	switch mode {
-	case 0:
+	switch option {
+	case "table":
 		{
 			if len(apis) == 0 {
 				color.New(color.FgHiBlue).Println("Not Found")
@@ -202,24 +356,49 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, m
 				}(), maxApiPathSize, api.Path, maxApiBackendURLSize, api.BackendURL)
 			}
 		}
-	case 1:
+	case "list":
 		{
+			// bs, e := apim.getBackends(resourceGroup, serviceName, "")
+			// if e != nil {
+			// 	return
+			// }
 			for i, api := range apis {
-				color.New(color.FgBlue).Print("No : ")
+				color.New(color.FgHiBlack).Print("No : ")
 				color.New(color.FgWhite).Println(1 + i)
-				color.New(color.FgCyan).Print("API NAME : ")
+				color.New(color.FgHiBlack).Print("API NAME : ")
 				color.New(color.FgWhite).Println(api.Name)
-				color.New(color.FgGreen).Print("API DISPLAY NAME : ")
+				color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
 				color.New(color.FgWhite).Println(api.DisplayName)
-				color.New(color.FgHiMagenta).Print("PROTOCOL(s) : ")
+				color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
 				color.New(color.FgWhite).Println(api.Protocols)
-				color.New(color.FgHiRed).Print("PATH : ")
+				color.New(color.FgHiBlack).Print("PATH : ")
 				color.New(color.FgWhite).Println(api.Path)
 				color.New(color.FgHiBlack).Print("Backend URL : ")
 				color.New(color.FgWhite).Println(api.BackendURL)
+
+				//color.New(color.FgHiBlack).Print("Backend ID : ")
+
+				// bes := func(bUrl string) bool {
+				// 	for _, b := range bs {
+				// 		fmt.Println(b.URL)
+				// 		if b.URL == bUrl {
+				// 			return true
+				// 		}
+				// 	}
+				// 	return false
+				// }(api.BackendURL)
+
+				// color.New(color.FgHiYellow).Println(bes)
+
+				color.New(color.FgHiBlack).Print("Oprations : \n")
+				//apim.getOperations(resourceGroup, serviceName, api.Name, "")
+				//apim.getOperationPolicy(resourceGroup, serviceName, api.Name, "")
+
+				apim.getAPIPolicy(resourceGroup, serviceName, api.Name)
 				color.New(color.FgHiWhite).Println("------------------------------------------------------------")
 
 			}
+
 		}
 	}
 
