@@ -157,13 +157,13 @@ func printExCommand(req string, header bool, options ...string) {
 	}
 
 	if header {
-		color.New(color.FgHiWhite).Print("\nExamples:\n")
+		fmt.Print("\nExamples:\n")
 	}
 	for i, option := range options {
 		if (i % 2) == 0 {
 			color.New(color.FgHiBlue).Print(option)
 		} else {
-			color.New(color.FgHiWhite).Print(option)
+			fmt.Print(option)
 		}
 		fmt.Print(" ")
 	}
