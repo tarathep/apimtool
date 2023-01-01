@@ -150,20 +150,20 @@ func main() {
 
 	}
 
-	fmt.Println(`
+	color.New(color.FgHiBlue).Println(`
     _   ___ ___ __  __   _____ ___   ___  _
    /_\ | _ \_ _|  \/  | |_   _/ _ \ / _ \| |
   / _ \|  _/| || |\/| |   | || (_) | (_) | |__
  /_/ \_\_| |___|_|  |_|   |_| \___/ \___/|____|
 												`)
 
-	color.New(color.FgHiWhite).Print("\nWelcome to the APIM Tool CLI!\n")
+	fmt.Print("\nWelcome to the APIM Tool CLI!\n")
 
-	color.New(color.FgHiWhite).Print("To support configuration of Microsoft Azure API Management\nUse `apimtool --version` to display the current version.\n")
-	color.New(color.FgHiWhite).Print("Here are the base commands:\n\n")
+	fmt.Print("To support configuration of Microsoft Azure API Management\nUse `apimtool --version` to display the current version.\n")
+	fmt.Print("Here are the base commands:\n\n")
 
-	color.New(color.FgHiWhite).Print("\tparse \t: Parsing Configuration files to Source files for support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
-	color.New(color.FgHiWhite).Print("\tapim \t: Manage Azure API Management services.\n\n")
+	fmt.Print("\tparse \t: Parsing Configuration files to Source files for support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
+	fmt.Print("\tapim \t: Manage Azure API Management services.\n\n")
 
 	printLast()
 
@@ -175,13 +175,13 @@ func printExCommand(req string, header bool, options ...string) {
 	}
 
 	if header {
-		color.New(color.FgHiWhite).Print("\nExamples:\n")
+		fmt.Print("\nExamples:\n")
 	}
 	for i, option := range options {
 		if (i % 2) == 0 {
 			color.New(color.FgHiBlue).Print(option)
 		} else {
-			color.New(color.FgHiWhite).Print(option)
+			fmt.Print(option)
 		}
 		fmt.Print(" ")
 	}
