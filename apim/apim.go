@@ -247,6 +247,11 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 
 		}
 	}
+	urlx, err := apim.GetBackendIDfromURL(resourceGroup, serviceName, "https://app-tarathec-az-usw3-dev-001.azurewebsites.net")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(urlx)
 
 }
 
@@ -276,14 +281,21 @@ func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) 
 
 func (a APIM) GetBackendIDfromURL(resourceGroup, serviceName, url string) (string, error) {
 
+	BackendIDs := "["
 	backends, err := a.getBackends(resourceGroup, serviceName, url)
+	fmt.Println(url)
 	if err != nil {
-		return "", err
+		return "err", err
 	}
 	for i, backend := range backends {
-		fmt.Println(i, backend.URL)
-		if backend.URL == url {
-			return backend.URL, nil
+		fmt.Println(backend.URL)
+		if len(backends) == 1 {
+			return backend.Name, nil
+		}
+		if (i + 1) == len(backends) {
+			BackendIDs += backend.Name + "]"
+		} else {
+			BackendIDs += backend.Name + ","
 		}
 	}
 	return "", nil

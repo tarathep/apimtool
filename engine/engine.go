@@ -11,13 +11,16 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/tarathep/apimtool/apim"
 	"github.com/tarathep/apimtool/models"
 	"gopkg.in/yaml.v3"
 
 	"github.com/rs/zerolog/log"
 )
 
-type Engine struct{}
+type Engine struct {
+	apim.APIM
+}
 
 func loadApi(filename string) (models.API, error) {
 	file, _ := os.ReadFile(filename)
@@ -70,10 +73,14 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 	return data, nil
 }
 
-func getBackendIdFromAPIM(backendURL string) string {
-	fmt.Println(backendURL)
+func (e Engine) getBackendID(backendTemplate models.BackendTemplate, resourceGroup, serviceName, backendURL string) string {
 
-	return ""
+	backendID, err := e.GetBackendIDfromURL(resourceGroup, serviceName, backendURL)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	return backendID
 }
 
 func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, backendURL string) string {
@@ -166,7 +173,7 @@ func generateConfigYML(outputPath string, api models.API) error {
 }
 
 // Convert Configuration API JSON file to csv, apiPolicyHeader.xml
-func ConfigParser(env, apiId string) {
+func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 
 	//check path
 	if !checkPaths([]string{"apis/dev", "apim-dev/sources", "apim-prd", "apim-dev/templates"}) {
@@ -194,7 +201,8 @@ func ConfigParser(env, apiId string) {
 	os.Mkdir(outputPath, 0755)
 
 	backendId := getBackendIdfromURLsourceTemplate(backend, api.Policies.BackendURL)
-	getBackendIdFromAPIM(api.Policies.BackendURL)
+
+	fmt.Println(e.getBackendID(backend, api.Policies.BackendURL, resourceGroup, serviceName))
 
 	generateXMLApiPolicyHeaders(outputPath, api, backendId)
 	generateCSV(outputPath, api)

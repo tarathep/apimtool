@@ -71,10 +71,28 @@ func main() {
 	}
 
 	if len(os.Args) > 1 {
+
 		switch os.Args[1] {
 		case "parse":
 			{
-				engine.ConfigParser(options.Environment, options.ApiID)
+				// PREPARATION and AUTH
+				apimEnv := apim.Env()
+				cred, err := azidentity.NewDefaultAzureCredential(nil)
+				if err != nil {
+					log.Error().Err(err).Msg("apim azidentity error")
+					os.Exit(-1)
+				}
+
+				e := engine.Engine{APIM: apim.APIM{
+					SubscriptionID: apimEnv.SubscriptionID,
+					Location:       apimEnv.Location,
+					Credential:     cred,
+					Context:        context.Background(),
+				}}
+
+				//go run main.go parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
+				e.ConfigParser(options.Environment, options.ApiID, options.ResourceGroup, options.ServiceName)
+				return
 			}
 		case "apim":
 			{
@@ -123,7 +141,7 @@ func main() {
 		case "config":
 			{
 				if len(os.Args) > 2 && os.Args[2] == "parser" {
-					engine.ConfigParser(options.Environment, options.ApiID)
+					//engine.ConfigParser(options.Environment, options.ApiID)
 					return
 				}
 			}
