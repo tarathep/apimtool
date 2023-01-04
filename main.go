@@ -77,6 +77,7 @@ func main() {
 			{
 				// PREPARATION and AUTH
 				apimEnv := apim.Env()
+
 				cred, err := azidentity.NewDefaultAzureCredential(nil)
 				if err != nil {
 					log.Error().Err(err).Msg("apim azidentity error")
@@ -90,8 +91,15 @@ func main() {
 					Context:        context.Background(),
 				}}
 
-				//go run main.go parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
-				e.ConfigParser(options.Environment, options.ApiID, options.ResourceGroup, options.ServiceName)
+				if options.ResourceGroup != "" && options.ServiceName != "" && options.Environment != "" && options.ApiID != "" {
+					//go run main.go parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
+					e.ConfigParser(options.Environment, options.ApiID, options.ResourceGroup, options.ServiceName)
+					return
+				}
+
+				printExCommand("--resource-group/-g, --service-name/-n --env --api-id\nthe directories and config files are required: ./apis/dev/{api-id}.json ./apim-dev/sources/ ./apim-dev/templates/backends.template.json", true, "apimtool parse --resource-group", "myresourcegroup", "--service-name", "myservice", "--env", "dev", "--api-id", "api-name-id")
+
+				printLast()
 				return
 			}
 		case "apim":
@@ -162,7 +170,7 @@ func main() {
 	fmt.Print("To support configuration of Microsoft Azure API Management\nUse `apimtool --version` to display the current version.\n")
 	fmt.Print("Here are the base commands:\n\n")
 
-	fmt.Print("\tparse \t: Parsing Configuration files to Source files for support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
+	fmt.Print("\tparse \t: Parsing Configuration files to Source files to support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
 	fmt.Print("\tapim \t: Manage Azure API Management services.\n\n")
 
 	printLast()

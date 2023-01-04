@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -59,6 +58,7 @@ func generateCSV(outputPath string, api models.API) error {
 	return nil
 }
 
+// Load backends in backends.template.json
 func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 	file, err := os.ReadFile(filename)
 	if err != nil {
@@ -73,17 +73,22 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 	return data, nil
 }
 
-func (e Engine) getBackendID(backendTemplate models.BackendTemplate, resourceGroup, serviceName, backendURL string) string {
+func (e Engine) validateBackendID(backendTemplate models.BackendTemplate, resourceGroup, serviceName, url string) (bool, string) {
+	backendIdSource := getBackendIDfromURLsourceTemplate(backendTemplate, url)
 
-	backendID, err := e.GetBackendIDfromURL(resourceGroup, serviceName, backendURL)
+	backendIdAPIM, err := e.GetBackendIDfromURL(resourceGroup, serviceName, "url="+url)
 	if err != nil {
-		fmt.Println(err)
-		return ""
+		return false, ""
 	}
-	return backendID
+	if backendIdSource != "" && backendIdAPIM != "" {
+		log.Debug().Msgf(backendIdAPIM, backendIdSource)
+		return true, backendIdAPIM
+	}
+	return false, ""
 }
 
-func getBackendIdfromURLsourceTemplate(backendTemplate models.BackendTemplate, backendURL string) string {
+// Get exsiting Backend ID from URL source template
+func getBackendIDfromURLsourceTemplate(backendTemplate models.BackendTemplate, backendURL string) string {
 
 	u, err := url.Parse(backendURL)
 	if err != nil {
@@ -175,14 +180,15 @@ func generateConfigYML(outputPath string, api models.API) error {
 // Convert Configuration API JSON file to csv, apiPolicyHeader.xml
 func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 
-	//check path
-	if !checkPaths([]string{"apis/dev", "apim-dev/sources", "apim-prd", "apim-dev/templates"}) {
+	// CHECK PATH ALL OPERATIONS
+	if !checkPaths([]string{"apis/dev", "apim-dev/sources", "apim-dev/templates"}) {
 		return
 	}
 
 	pathAPIs := "./apis/" + env + "/" + apiId + ".json"
 	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
 
+	// LOAD CONFIGURATION FILE {apis/env/apiId.json}
 	api, _ := loadApi(pathAPIs)
 	if len(api.Operations) == 0 {
 		color.New(color.FgYellow).Println("API config file not found")
@@ -190,19 +196,24 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 		return
 	}
 
-	backend, _ := loadBackendTemplate(pathBackend)
-	if backend.ContentVersion == "" {
+	// LOAD LIST OF BACKEND IN backends.template.json
+	backendTemplate, _ := loadBackendTemplate(pathBackend)
+	if backendTemplate.ContentVersion == "" {
 		color.New(color.FgYellow).Println("backends.template.json not found")
 		log.Logger.Fatal().Msg("backends.template.json not found")
 		return
 	}
 
+	// PREPARE OUTPUT DIRECTORY SOURCE WHEN PARSER FILE
 	outputPath := "apim-" + env + "/sources/" + api.Apiname
 	os.Mkdir(outputPath, 0755)
 
-	backendId := getBackendIdfromURLsourceTemplate(backend, api.Policies.BackendURL)
-
-	fmt.Println(e.getBackendID(backend, api.Policies.BackendURL, resourceGroup, serviceName))
+	// VALIDATE BACKEND ID IF ALREADY EXIST RETURN BACKEND ID ? CREATE NEW
+	exist, backendId := e.validateBackendID(backendTemplate, resourceGroup, serviceName, api.Policies.BackendURL)
+	if !exist {
+		color.New(color.FgYellow).Println("new backend")
+		return
+	}
 
 	generateXMLApiPolicyHeaders(outputPath, api, backendId)
 	generateCSV(outputPath, api)

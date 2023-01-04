@@ -8,3 +8,8 @@ You could easily use az login in command line to sign in to Azure via your defau
 ```bash
 az login
 ```
+
+
+```bash
+go run main.go apim backend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
+```

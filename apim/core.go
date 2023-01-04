@@ -156,6 +156,7 @@ func (a APIM) getAPIs(resourceGroup, serviceName, filter string) ([]Api, error) 
 	return apis, nil
 }
 
+// get backend from APIM Filter pettern {key}={val}
 func (a APIM) getBackends(resourceGroup, serviceName, filter string) ([]Backend, error) {
 	client, err := armapimanagement.NewBackendClient(a.SubscriptionID, a.Credential, nil)
 	if err != nil {

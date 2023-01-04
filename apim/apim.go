@@ -283,12 +283,11 @@ func (a APIM) GetBackendIDfromURL(resourceGroup, serviceName, url string) (strin
 
 	BackendIDs := "["
 	backends, err := a.getBackends(resourceGroup, serviceName, url)
-	fmt.Println(url)
+
 	if err != nil {
 		return "err", err
 	}
 	for i, backend := range backends {
-		fmt.Println(backend.URL)
 		if len(backends) == 1 {
 			return backend.Name, nil
 		}
