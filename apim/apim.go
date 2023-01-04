@@ -37,7 +37,7 @@ func Env() struct {
 }
 
 func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName, option string) {
-	color.New(color.Italic).Print("List Backend's\n\n")
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List Backend's\n\n")
 
 	backends, err := apim.getBackends(resourceGroup, serviceName, filterDisplayName)
 	if err != nil {
@@ -87,11 +87,11 @@ func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName, opti
 		{
 			for i, backend := range backends {
 				color.New(color.FgHiBlack).Print("No : ")
-				color.New(color.FgWhite).Println(1 + i)
+				fmt.Println(1 + i)
 				color.New(color.FgHiBlack).Print("BACKEND NAME : ")
-				color.New(color.FgWhite).Println(backend.Name)
+				fmt.Println(backend.Name)
 				color.New(color.FgHiBlack).Print("BACKEND URL : ")
-				color.New(color.FgWhite).Println(backend.URL)
+				fmt.Println(backend.URL)
 				color.New(color.FgHiWhite).Println("------------------------------------------------------------")
 			}
 
@@ -101,7 +101,7 @@ func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName, opti
 
 func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, option string) {
 
-	color.New(color.Italic).Print("List API Management API's\n\n")
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List API Management API's\n\n")
 
 	apis, err := apim.getAPIs(resourceGroup, serviceName, filterDisplayName)
 	if err != nil {
@@ -182,27 +182,23 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 		}
 	case "list":
 		{
-			// bs, e := apim.getBackends(resourceGroup, serviceName, "")
-			// if e != nil {
-			// 	return
-			// }
 			for i, api := range apis {
 				color.New(color.FgHiBlack).Print("No : ")
-				color.New(color.FgWhite).Println(1 + i)
+				fmt.Println(1 + i)
 				color.New(color.FgHiBlack).Print("API NAME : ")
-				color.New(color.FgWhite).Println(api.Name)
+				fmt.Println(api.Name)
 				color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
-				color.New(color.FgWhite).Println(api.DisplayName)
+				fmt.Println(api.DisplayName)
 				color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
-				color.New(color.FgWhite).Println(api.Protocols)
+				fmt.Println(api.Protocols)
 				color.New(color.FgHiBlack).Print("PATH : ")
-				color.New(color.FgWhite).Println(api.Path)
+				fmt.Println(api.Path)
 				color.New(color.FgHiBlack).Print("Backend URL : ")
-				color.New(color.FgWhite).Println(api.BackendURL)
+				fmt.Println(api.BackendURL)
 
 				color.New(color.FgHiBlack).Print("Backend Policy ID : ")
 				backendPolicyID := apim.GetAPIPolicy(resourceGroup, serviceName, api.Name).Inbound.SetBackendService.BackendID
-				color.New(color.FgWhite).Println(backendPolicyID)
+				fmt.Println(backendPolicyID)
 
 				color.New(color.FgHiBlack).Print("Backend Policy URL : ")
 
@@ -211,7 +207,7 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 					color.New(color.FgHiRed).Println("Error", err)
 					return
 				}
-				color.New(color.FgWhite).Println(backendPolicyURL)
+				fmt.Println(backendPolicyURL)
 
 				color.New(color.FgHiBlack).Print("Operations : \n")
 				operations, err := apim.getOperations(resourceGroup, serviceName, api.Name, "")
@@ -309,4 +305,23 @@ func (a APIM) GetAPIPolicy(resourceGroup, serviceName, apiID string) models.Poli
 	}
 	xml.Unmarshal([]byte(apiPolicy[0]), &apiPoliciesHeader)
 	return apiPoliciesHeader
+}
+
+// go run main.go apim backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
+func (a APIM) CreateOrUpdateBackend(resourceGroup, serviceName, backendID, url, protocol string) {
+
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("Create a new backend entity in Api Management.\n\n")
+
+	fmt.Println("Backend ID \t:", backendID, "\nURL \t\t:", url, "\nProtocol \t:", protocol)
+
+	color.New(color.FgHiBlack).Print("\nCreating : ")
+	result, err := a.createOrUpdateBackend(resourceGroup, serviceName, backendID, url, protocol)
+	if err != nil {
+		color.New(color.FgHiRed).Println("ERROR", err)
+		return
+	}
+
+	if safePointerString(result.Name) == backendID && safePointerString(result.Properties.URL) == url {
+		color.New(color.FgHiGreen).Println("Done\n")
+	}
 }

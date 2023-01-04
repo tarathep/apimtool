@@ -156,6 +156,44 @@ func (a APIM) getAPIs(resourceGroup, serviceName, filter string) ([]Api, error) 
 	return apis, nil
 }
 
+func (a APIM) createOrUpdateBackend(resourceGroup, serviceName, backendID, url, protocol string) (armapimanagement.BackendClientCreateOrUpdateResponse, error) {
+	client, err := armapimanagement.NewBackendClient(a.SubscriptionID, a.Credential, nil)
+	if err != nil {
+		log.Println("failed to create client: %v", err)
+		return armapimanagement.BackendClientCreateOrUpdateResponse{}, err
+	}
+
+	return client.CreateOrUpdate(
+		a.Context,
+		resourceGroup,
+		serviceName,
+		backendID,
+		armapimanagement.BackendContract{
+			Properties: &armapimanagement.BackendContractProperties{
+				Protocol: func() *armapimanagement.BackendProtocol {
+					switch protocol {
+					case "http":
+						return &armapimanagement.PossibleBackendProtocolValues()[0]
+					case "soap":
+						return &armapimanagement.PossibleBackendProtocolValues()[1]
+					default:
+						return nil
+					}
+				}(),
+				URL:         to.Ptr(url),
+				Credentials: &armapimanagement.BackendCredentialsContract{},
+				Description: nil,
+				Properties:  &armapimanagement.BackendProperties{},
+				Proxy:       nil,
+				ResourceID:  nil,
+				TLS:         &armapimanagement.BackendTLSProperties{ValidateCertificateName: to.Ptr(false), ValidateCertificateChain: to.Ptr(false)},
+				Title:       nil,
+			},
+		},
+		&armapimanagement.BackendClientCreateOrUpdateOptions{})
+
+}
+
 // get backend from APIM Filter pettern {key}={val}
 func (a APIM) getBackends(resourceGroup, serviceName, filter string) ([]Backend, error) {
 	client, err := armapimanagement.NewBackendClient(a.SubscriptionID, a.Credential, nil)

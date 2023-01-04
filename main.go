@@ -32,6 +32,10 @@ type Options struct {
 	FilterDisplayName string `long:"filter-display-name" description:"Filter of APIs by displayName."`
 	Top               string `long:"top" description:"Number of records to return."`
 
+	BackendID string `long:"backend-id" description:"Backend ID on APIM."`
+	URL       string `long:"url" description:"URL endpoint"`
+	Protocol  string `long:"protocol" description:"protocol to communcation"`
+
 	FilePath    string `long:"file-path" description:"File Path"`
 	Environment string `long:"env" description:"Environment"`
 	ApiID       string `long:"api-id"`
@@ -141,6 +145,15 @@ func main() {
 						printExCommand("--resource-group/-g, --service-name/-n", true, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice")
 						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay")
 						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay", "--option", "table/list")
+					}
+
+					if len(os.Args) > 3 && os.Args[3] == "create" {
+						if options.ResourceGroup != "" && options.ServiceName != "" && options.BackendID != "" {
+							apim.CreateOrUpdateBackend(options.ResourceGroup, options.ServiceName, options.BackendID, options.URL, options.Protocol)
+							return
+						}
+						//go run main.go apim backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol soap
+						printExCommand("--resource-group/-g, --service-name/-n --backend-id --url --protocol {http/soap}", true, "apimtool apim backend create --resource-group", "myresourcegroup", "--service-name", "myservice", "--backend-id", "my-backend-id", "--url", "https://127.0.0.1:8081", "--protocol", "http")
 					}
 				}
 				printLast()

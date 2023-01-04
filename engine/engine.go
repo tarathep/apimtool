@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -218,5 +219,34 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 	generateXMLApiPolicyHeaders(outputPath, api, backendId)
 	generateCSV(outputPath, api)
 	generateConfigYML(outputPath, api)
+}
 
+type Identification struct {
+	ID    string
+	Phone int64
+	Email string
+}
+
+func (e Engine) addBackendTemplateJSON() {
+
+	jsonText := ""
+	// define slice of Identification
+	var idents []Identification
+
+	// Unmarshall it
+	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// add further value into it
+	idents = append(idents, Identification{ID: "ID", Phone: 15555555555, Email: "Email"})
+
+	// now Marshal it
+	result, err := json.Marshal(idents)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(result))
 }
