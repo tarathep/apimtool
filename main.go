@@ -198,8 +198,9 @@ func main() {
 	fmt.Print("To support configuration of Microsoft Azure API Management\nUse `apimtool --version` to display the current version.\n")
 	fmt.Print("Here are the base commands:\n\n")
 
-	fmt.Print("\tparse \t: Parsing Configuration files to Source files to support Azure API Management DevOps Resource Kit,\n\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
-	fmt.Print("\tapim \t: Manage Azure API Management services.\n\n")
+	fmt.Print("\tparse \t\t: Parsing Configuration files to Source files to support Azure API Management DevOps Resource Kit,\n\t\t\t please refer https://github.com/Azure/azure-api-management-devops-resource-kit\n")
+	fmt.Print("\tapim \t\t: Manage Azure API Management services.\n")
+	fmt.Print("\ttemplate \t: Manage template files configuration to support Azure Resource Manager template.\n\n")
 
 	printLast()
 
