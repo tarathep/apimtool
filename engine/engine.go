@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -221,32 +222,132 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 	generateConfigYML(outputPath, api)
 }
 
-type Identification struct {
-	ID    string
-	Phone int64
-	Email string
+func (Engine) removeBackendTemplateJsonByID(pathBackend string, backendTemplate models.BackendTemplate, backendID string) error {
+	var beTempl models.BackendTemplate
+
+	beTempl.Schema = backendTemplate.Schema
+	beTempl.ContentVersion = backendTemplate.ContentVersion
+	beTempl.Parameters = backendTemplate.Parameters
+
+	for _, res := range backendTemplate.Resources {
+		if !(res.Name == "[concat(parameters('ApimServiceName'), '/"+backendID+"')]") {
+			beTempl.Resources = append(beTempl.Resources, res)
+		}
+	}
+
+	file, err := json.MarshalIndent(beTempl, " ", "\t")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(pathBackend, file, 0644)
 }
 
-func (e Engine) addBackendTemplateJSON() {
+func (Engine) addBackendTemplateJSON(pathBackend string, backendTemplate models.BackendTemplate, backendID string, url string, protocol string) error {
 
-	jsonText := ""
-	// define slice of Identification
-	var idents []Identification
-
-	// Unmarshall it
-	if err := json.Unmarshal([]byte(jsonText), &idents); err != nil {
-		fmt.Println(err)
-		return
+	//CHECK DUPLICATE?
+	for _, res := range backendTemplate.Resources {
+		if res.Properties.URL == url && res.Properties.Protocol == protocol {
+			return errors.New("duplicate backend endpoint at Backend ID " + res.Name)
+		}
+		if res.Name == "[concat(parameters('ApimServiceName'), '/"+backendID+"')]" {
+			return errors.New("duplicate backend id")
+		}
 	}
 
-	// add further value into it
-	idents = append(idents, Identification{ID: "ID", Phone: 15555555555, Email: "Email"})
+	//APPEND
+	backendTemplate.Resources = append(backendTemplate.Resources,
+		struct {
+			Properties struct {
+				Credentials struct {
+					Query  struct{} "json:\"query\""
+					Header struct{} "json:\"header\""
+				} "json:\"credentials\""
+				TLS struct {
+					ValidateCertificateChain bool "json:\"validateCertificateChain\""
+					ValidateCertificateName  bool "json:\"validateCertificateName\""
+				} "json:\"tls\""
+				URL      string "json:\"url\""
+				Protocol string "json:\"protocol\""
+			} "json:\"properties\""
+			Name       string "json:\"name\""
+			Type       string "json:\"type\""
+			APIVersion string "json:\"apiVersion\""
+		}{
+			Properties: struct {
+				Credentials struct {
+					Query  struct{} "json:\"query\""
+					Header struct{} "json:\"header\""
+				} "json:\"credentials\""
+				TLS struct {
+					ValidateCertificateChain bool "json:\"validateCertificateChain\""
+					ValidateCertificateName  bool "json:\"validateCertificateName\""
+				} "json:\"tls\""
+				URL      string "json:\"url\""
+				Protocol string "json:\"protocol\""
+			}{Credentials: struct {
+				Query  struct{} "json:\"query\""
+				Header struct{} "json:\"header\""
+			}{Query: struct{}{}, Header: struct{}{}},
+				TLS: struct {
+					ValidateCertificateChain bool "json:\"validateCertificateChain\""
+					ValidateCertificateName  bool "json:\"validateCertificateName\""
+				}{ValidateCertificateChain: false, ValidateCertificateName: false},
+				URL:      url,
+				Protocol: protocol,
+			},
+			Name:       "[concat(parameters('ApimServiceName'), '/" + backendID + "')]",
+			Type:       "Microsoft.ApiManagement/service/backends",
+			APIVersion: "2021-01-01-preview",
+		})
 
-	// now Marshal it
-	result, err := json.Marshal(idents)
+	// Write to backends.template.json
+	file, err := json.MarshalIndent(backendTemplate, " ", "\t")
 	if err != nil {
-		fmt.Println(err)
+		return err
+	}
+	return os.WriteFile(pathBackend, file, 0644)
+}
+
+func (e Engine) AddBackendTemplateJSON(env string, backendID string, url string, protocol string) {
+
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("Create a new backend entity in backends.template.json\n\n")
+
+	fmt.Println("Backend ID \t:", backendID, "\nURL \t\t:", url, "\nProtocol \t:", protocol)
+
+	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
+	backendTemplate, _ := loadBackendTemplate(pathBackend)
+	if backendTemplate.ContentVersion == "" {
+		color.New(color.FgYellow).Println("backends.template.json not found")
+		log.Logger.Fatal().Msg("backends.template.json not found")
 		return
 	}
-	fmt.Println(string(result))
+
+	color.New(color.FgHiBlack).Print("\nCreating : ")
+	if err := e.addBackendTemplateJSON(pathBackend, backendTemplate, backendID, url, protocol); err != nil {
+		color.New(color.FgHiRed).Println("ERROR", err)
+		return
+	}
+	color.New(color.FgHiGreen).Println("Done\n")
+}
+
+func (e Engine) DeleteBackendTemplateJSONByID(env string, backendID string) {
+
+	color.New(color.Italic, color.FgHiYellow, color.Bold).Print("Delete a backend entity in backends.template.json\n\n")
+
+	fmt.Println("Backend ID \t:", backendID)
+
+	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
+	backendTemplate, _ := loadBackendTemplate(pathBackend)
+	if backendTemplate.ContentVersion == "" {
+		color.New(color.FgYellow).Println("backends.template.json not found")
+		log.Logger.Fatal().Msg("backends.template.json not found")
+		return
+	}
+
+	color.New(color.FgHiBlack).Print("\nDeleing : ")
+	if err := e.removeBackendTemplateJsonByID(pathBackend, backendTemplate, backendID); err != nil {
+		color.New(color.FgHiRed).Println("ERROR", err)
+		return
+	}
+	color.New(color.FgHiGreen).Println("Done\n")
 }

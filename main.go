@@ -159,16 +159,31 @@ func main() {
 				printLast()
 				return
 			}
-		case "config":
+		case "template":
 			{
-				if len(os.Args) > 2 && os.Args[2] == "parser" {
-					//engine.ConfigParser(options.Environment, options.ApiID)
+				if len(os.Args) > 2 && os.Args[2] == "backend" {
+					if len(os.Args) > 3 && os.Args[3] == "create" {
+						if options.Environment != "" && options.BackendID != "" && options.URL != "" && options.Protocol != "" {
+							e := engine.Engine{}
+							e.AddBackendTemplateJSON(options.Environment, options.BackendID, options.URL, options.Protocol)
+							return
+						}
+						printExCommand("--env --backend-id --url --protocol {http/soap}\nthe directories and config files are required: ./apim-{env}/templates/backends.template.json", true, "apimtool template backend create", "--env", "dev", "--backend-id", "my-backend-id", "--url", "https://127.0.0.1:8081", "--protocol", "http")
+					}
+					if len(os.Args) > 3 && os.Args[3] == "delete" {
+						if options.Environment != "" && options.BackendID != "" {
+							e := engine.Engine{}
+							e.DeleteBackendTemplateJSONByID(options.Environment, options.BackendID)
+							return
+						}
+						printExCommand("--env --backend-id\nthe directories and config files are required: ./apim-{env}/templates/backends.template.json", true, "apimtool template backend delete", "--env", "dev", "--backend-id", "my-backend-id")
+					}
+					printLast()
 					return
 				}
 			}
 
 		}
-
 	}
 
 	color.New(color.FgHiBlue).Println(`
