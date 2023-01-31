@@ -243,12 +243,6 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 
 		}
 	}
-	urlx, err := apim.GetBackendIDfromURL(resourceGroup, serviceName, "https://app-tarathec-az-usw3-dev-001.azurewebsites.net")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(urlx)
-
 }
 
 func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) (string, error) {
@@ -276,9 +270,8 @@ func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) 
 }
 
 func (a APIM) GetBackendIDfromURL(resourceGroup, serviceName, url string) (string, error) {
-
 	BackendIDs := "["
-	backends, err := a.getBackends(resourceGroup, serviceName, url)
+	backends, err := a.getBackends(resourceGroup, serviceName, "url="+url)
 
 	if err != nil {
 		return "err", err
@@ -315,9 +308,28 @@ func (a APIM) CreateOrUpdateBackend(resourceGroup, serviceName, backendID, url, 
 	fmt.Println("Backend ID \t:", backendID, "\nURL \t\t:", url, "\nProtocol \t:", protocol)
 
 	color.New(color.FgHiBlack).Print("\nCreating : ")
+
+	//Check existing backend or update?
+	beID, err := a.GetBackendIDfromURL(resourceGroup, serviceName, url)
+	if err != nil {
+		color.New(color.FgHiRed).Println("ERROR", err)
+		os.Exit(-1)
+		return
+	}
+
+	fmt.Println(len(beID))
+
+	if beID != "" {
+		//have exiting backend
+		color.New(color.FgHiYellow).Println(beID, "backend-id already exsit\n")
+		os.Exit(-1)
+		return
+	}
+
 	result, err := a.createOrUpdateBackend(resourceGroup, serviceName, backendID, url, protocol)
 	if err != nil {
 		color.New(color.FgHiRed).Println("ERROR", err)
+		os.Exit(-1)
 		return
 	}
 

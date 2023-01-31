@@ -78,7 +78,7 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 func (e Engine) validateBackendID(backendTemplate models.BackendTemplate, resourceGroup, serviceName, url string) (bool, string) {
 	backendIdSource := getBackendIDfromURLsourceTemplate(backendTemplate, url)
 
-	backendIdAPIM, err := e.GetBackendIDfromURL(resourceGroup, serviceName, "url="+url)
+	backendIdAPIM, err := e.GetBackendIDfromURL(resourceGroup, serviceName, url)
 	if err != nil {
 		return false, ""
 	}
@@ -323,8 +323,19 @@ func (e Engine) AddBackendTemplateJSON(env string, backendID string, url string,
 	}
 
 	color.New(color.FgHiBlack).Print("\nCreating : ")
+
+	//...
+	//Check existing backend or update?
+	if beID := getBackendIDfromURLsourceTemplate(backendTemplate, url); beID != "" {
+		//have exiting backend
+		color.New(color.FgHiYellow).Println(beID, "backend-id already exsit\n")
+		os.Exit(-1)
+		return
+	}
+
 	if err := e.addBackendTemplateJSON(pathBackend, backendTemplate, backendID, url, protocol); err != nil {
 		color.New(color.FgHiRed).Println("ERROR", err)
+		os.Exit(-1)
 		return
 	}
 	color.New(color.FgHiGreen).Println("Done\n")
