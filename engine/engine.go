@@ -169,7 +169,7 @@ func generateConfigYML(outputPath string, api models.API) error {
 	apiConfig.Tags = api.Tags
 
 	configYML.Apis = append(configYML.Apis, apiConfig)
-	configYML.OutputLocation = "../../templates/apis/" + api.Apiname
+	configYML.OutputLocation = "../templates/apis/" + api.Apiname
 
 	data, err := yaml.Marshal(&configYML)
 	if err != nil {
