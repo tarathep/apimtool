@@ -22,6 +22,7 @@ vendor/
 *.csv
 *.json
 config.yaml
-apim-dev
-apim-prd
+sources
+templates
+apim-apis
 apis

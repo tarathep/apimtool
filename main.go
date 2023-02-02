@@ -182,8 +182,10 @@ func main() {
 					return
 				}
 			}
-
+		case "check":
+			//
 		}
+
 	}
 
 	color.New(color.FgHiBlue).Println(`

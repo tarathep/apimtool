@@ -183,12 +183,12 @@ func generateConfigYML(outputPath string, api models.API) error {
 func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 
 	// CHECK PATH ALL OPERATIONS
-	if !checkPaths([]string{"apis/dev", "apim-dev/sources", "apim-dev/templates"}) {
+	if !checkPaths([]string{"apim-apis/" + env, "sources/", "templates/"}) {
 		return
 	}
 
-	pathAPIs := "./apis/" + env + "/" + apiId + ".json"
-	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
+	pathAPIs := "./apim-apis/" + env + "/" + apiId + "/" + apiId + ".json"
+	pathBackend := "./templates/" + "backends.template" + ".json"
 
 	// LOAD CONFIGURATION FILE {apis/env/apiId.json}
 	api, _ := loadApi(pathAPIs)
@@ -207,7 +207,7 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 	}
 
 	// PREPARE OUTPUT DIRECTORY SOURCE WHEN PARSER FILE
-	outputPath := "apim-" + env + "/sources/" + api.Apiname
+	outputPath := "./sources/" + api.Apiname
 	os.Mkdir(outputPath, 0755)
 
 	// VALIDATE BACKEND ID IF ALREADY EXIST RETURN BACKEND ID ? CREATE NEW
@@ -232,6 +232,8 @@ func (Engine) removeBackendTemplateJsonByID(pathBackend string, backendTemplate 
 	for _, res := range backendTemplate.Resources {
 		if !(res.Name == "[concat(parameters('ApimServiceName'), '/"+backendID+"')]") {
 			beTempl.Resources = append(beTempl.Resources, res)
+		} else {
+			fmt.Println(res.Name)
 		}
 	}
 
@@ -314,7 +316,7 @@ func (e Engine) AddBackendTemplateJSON(env string, backendID string, url string,
 
 	fmt.Println("Backend ID \t:", backendID, "\nURL \t\t:", url, "\nProtocol \t:", protocol)
 
-	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
+	pathBackend := "./templates/" + "backends.template" + ".json"
 	backendTemplate, _ := loadBackendTemplate(pathBackend)
 	if backendTemplate.ContentVersion == "" {
 		color.New(color.FgYellow).Println("backends.template.json not found")
@@ -347,7 +349,7 @@ func (e Engine) DeleteBackendTemplateJSONByID(env string, backendID string) {
 
 	fmt.Println("Backend ID \t:", backendID)
 
-	pathBackend := "./apim-" + env + "/templates/" + "backends.template" + ".json"
+	pathBackend := "./templates/" + "backends.template" + ".json"
 	backendTemplate, _ := loadBackendTemplate(pathBackend)
 	if backendTemplate.ContentVersion == "" {
 		color.New(color.FgYellow).Println("backends.template.json not found")

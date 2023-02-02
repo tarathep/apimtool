@@ -1,6 +1,7 @@
 package apim
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -246,4 +247,14 @@ func (a APIM) getBackends(resourceGroup, serviceName, filter string) ([]Backend,
 		}
 	}
 	return backends, err
+}
+
+func (a APIM) getAPIsBindingBackend(resourceGroup, serviceName, filter string) {
+	backendIDs, err := a.getBackends(resourceGroup, serviceName, filter)
+	if err != nil {
+		return
+	}
+	for i, backendID := range backendIDs {
+		fmt.Println(i, backendID)
+	}
 }
