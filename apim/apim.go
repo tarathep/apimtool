@@ -2,6 +2,7 @@ package apim
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"log"
@@ -40,6 +41,7 @@ func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName, opti
 	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List Backend's\n\n")
 
 	backends, err := apim.getBackends(resourceGroup, serviceName, filterDisplayName)
+
 	if err != nil {
 		color.New(color.FgRed).Println("Fail to get APIs", err)
 		return
@@ -92,6 +94,8 @@ func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName, opti
 				fmt.Println(backend.Name)
 				color.New(color.FgHiBlack).Print("BACKEND URL : ")
 				fmt.Println(backend.URL)
+				color.New(color.FgHiBlack).Print("BACKEND Protocol : ")
+				fmt.Println(backend.Protocol)
 				color.New(color.FgHiWhite).Println("------------------------------------------------------------")
 			}
 
@@ -336,4 +340,159 @@ func (a APIM) CreateOrUpdateBackend(resourceGroup, serviceName, backendID, url, 
 	if safePointerString(result.Name) == backendID && safePointerString(result.Properties.URL) == url {
 		color.New(color.FgHiGreen).Println("Done\n")
 	}
+}
+
+func (apim APIM) ExportBackendsTemplate(resourceGroup, serviceName, pathBackend string) {
+	if pathBackend == "" {
+		pathBackend = "backends.template.json"
+	} else {
+		pathBackend = pathBackend + "/backends.template.json"
+	}
+
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("Export Backends ARM template {backends.template.json} \n\n")
+
+	backends, err := apim.getBackends(resourceGroup, serviceName, "")
+	if err != nil {
+		color.New(color.FgRed).Println("Fail to get APIs", err)
+		return
+	}
+
+	var backendTemplate models.BackendTemplate
+
+	for _, backend := range backends {
+		//init arm header
+		backendTemplate.Schema = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+		backendTemplate.ContentVersion = "1.0.0.0"
+		backendTemplate.Parameters.ApimServiceName.Type = "string"
+
+		backendTemplate.Resources = append(backendTemplate.Resources,
+			struct {
+				Properties struct {
+					Credentials struct {
+						Query  struct{} "json:\"query\""
+						Header struct{} "json:\"header\""
+					} "json:\"credentials\""
+					TLS struct {
+						ValidateCertificateChain bool "json:\"validateCertificateChain\""
+						ValidateCertificateName  bool "json:\"validateCertificateName\""
+					} "json:\"tls\""
+					URL      string "json:\"url\""
+					Protocol string "json:\"protocol\""
+				} "json:\"properties\""
+				Name       string "json:\"name\""
+				Type       string "json:\"type\""
+				APIVersion string "json:\"apiVersion\""
+			}{
+				Properties: struct {
+					Credentials struct {
+						Query  struct{} "json:\"query\""
+						Header struct{} "json:\"header\""
+					} "json:\"credentials\""
+					TLS struct {
+						ValidateCertificateChain bool "json:\"validateCertificateChain\""
+						ValidateCertificateName  bool "json:\"validateCertificateName\""
+					} "json:\"tls\""
+					URL      string "json:\"url\""
+					Protocol string "json:\"protocol\""
+				}{Credentials: struct {
+					Query  struct{} "json:\"query\""
+					Header struct{} "json:\"header\""
+				}{Query: struct{}{}, Header: struct{}{}},
+					TLS: struct {
+						ValidateCertificateChain bool "json:\"validateCertificateChain\""
+						ValidateCertificateName  bool "json:\"validateCertificateName\""
+					}{ValidateCertificateChain: false, ValidateCertificateName: false},
+					URL:      backend.URL,
+					Protocol: backend.Protocol,
+				},
+				Name:       "[concat(parameters('ApimServiceName'), '/" + backend.Name + "')]",
+				Type:       "Microsoft.ApiManagement/service/backends",
+				APIVersion: "2021-01-01-preview",
+			})
+	}
+
+	// Write to backends.template.json
+	file, err := json.MarshalIndent(backendTemplate, " ", "\t")
+
+	if err != nil {
+		color.New(color.FgHiRed).Println("ERROR", err)
+		os.Exit(-1)
+		return
+	}
+	color.New(color.FgHiBlack).Print("\nExporting : ")
+	if err := os.WriteFile(pathBackend, file, 0644); err != nil {
+		color.New(color.FgHiRed).Println("ERROR", err)
+		os.Exit(-1)
+		return
+	}
+	color.New(color.FgHiGreen).Println("Done\n")
+}
+
+func (a APIM) ListAPIsDependingOnBackend(resourceGroup, serviceName, filter string) {
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List API Management API's depending Backend \n\n")
+
+	a.getAPIsBindingBackend(resourceGroup, serviceName, filter)
+	// apis, err := apim.getAPIs(resourceGroup, serviceName, filterDisplayName)
+	// if err != nil {
+	// 	color.New(color.FgRed).Println("Fail to get APIs", err)
+	// 	return
+	// }
+
+	// for i, api := range apis {
+	// 	color.New(color.FgHiBlack).Print("No : ")
+	// 	fmt.Println(1 + i)
+	// 	color.New(color.FgHiBlack).Print("API NAME : ")
+	// 	fmt.Println(api.Name)
+	// 	color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
+	// 	fmt.Println(api.DisplayName)
+	// 	color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
+	// 	fmt.Println(api.Protocols)
+	// 	color.New(color.FgHiBlack).Print("PATH : ")
+	// 	fmt.Println(api.Path)
+	// 	color.New(color.FgHiBlack).Print("Backend URL : ")
+	// 	fmt.Println(api.BackendURL)
+
+	// 	color.New(color.FgHiBlack).Print("Backend Policy ID : ")
+	// 	backendPolicyID := apim.GetAPIPolicy(resourceGroup, serviceName, api.Name).Inbound.SetBackendService.BackendID
+	// 	fmt.Println(backendPolicyID)
+
+	// 	color.New(color.FgHiBlack).Print("Backend Policy URL : ")
+
+	// 	backendPolicyURL, err := apim.GetBackendURLfromID(resourceGroup, serviceName, backendPolicyID)
+	// 	if err != nil {
+	// 		color.New(color.FgHiRed).Println("Error", err)
+	// 		return
+	// 	}
+	// 	fmt.Println(backendPolicyURL)
+
+	// 	color.New(color.FgHiBlack).Print("Operations : \n")
+	// 	operations, err := apim.getOperations(resourceGroup, serviceName, api.Name, "")
+	// 	if err != nil {
+	// 		color.New(color.FgHiRed).Println("Error", err)
+	// 		return
+	// 	}
+	// 	for i, operation := range operations {
+	// 		color.New(color.FgHiWhite).Print("  ", (i + 1), " ")
+	// 		switch operation.Method {
+	// 		case "GET":
+	// 			color.New(color.FgHiBlue).Print(operation.Method, " ")
+	// 		case "POST":
+	// 			color.New(color.FgHiGreen).Print(operation.Method, " ")
+	// 		case "PUT":
+	// 			color.New(color.FgHiYellow).Print(operation.Method, " ")
+	// 		case "DELETE":
+	// 			color.New(color.FgHiRed).Print(operation.Method, " ")
+	// 		case "PATCH":
+	// 			color.New(color.FgHiCyan).Print(operation.Method, " ")
+	// 		default:
+	// 			color.New(color.FgHiBlack).Print(operation.Method, " ")
+	// 		}
+	// 		color.New(color.FgHiWhite).Println(operation.Name, operation.URLTemplate)
+
+	// 	}
+
+	// 	color.New(color.FgHiWhite).Println("------------------------------------------------------------")
+
+	// }
+
 }

@@ -26,3 +26,4 @@ sources
 templates
 apim-apis
 apis
+backends.templates.json

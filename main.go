@@ -29,6 +29,7 @@ type Options struct {
 	Location       string `short:"l" long:"location" description:"Location"`
 	ServiceName    string `short:"n" long:"service-name" description:"Name"`
 
+	Filter            string `long:"filter" description:"Filter"`
 	FilterDisplayName string `long:"filter-display-name" description:"Filter of APIs by displayName."`
 	Top               string `long:"top" description:"Number of records to return."`
 
@@ -45,6 +46,8 @@ type Options struct {
 	Logging bool   `long:"logging" description:"Console log"`
 
 	Option string `short:"o" long:"option" description:"Option"`
+
+	Confirm bool `short:"y"`
 }
 
 func main() {
@@ -137,11 +140,24 @@ func main() {
 					}
 				}
 				if len(os.Args) > 2 && os.Args[2] == "backend" {
+
+					if len(os.Args) > 3 && os.Args[3] == "api" {
+						if len(os.Args) > 4 && os.Args[4] == "depend" {
+							if len(os.Args) > 5 && os.Args[5] == "list" {
+								apim.ListAPIsDependingOnBackend(options.ResourceGroup, options.ServiceName, options.Filter)
+							}
+							if len(os.Args) > 5 && os.Args[5] == "update" {
+								//UPDATE BACKEND TO APIS
+							}
+						}
+					}
+
 					if len(os.Args) > 3 && os.Args[3] == "list" {
 						if options.ResourceGroup != "" && options.ServiceName != "" {
 							apim.ListBackend(options.ResourceGroup, options.ServiceName, options.FilterDisplayName, options.Option)
 							return
 						}
+
 						printExCommand("--resource-group/-g, --service-name/-n", true, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice")
 						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay")
 						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay", "--option", "table/list")
@@ -162,6 +178,30 @@ func main() {
 		case "template":
 			{
 				if len(os.Args) > 2 && os.Args[2] == "backend" {
+					if len(os.Args) > 3 && os.Args[3] == "export" {
+
+						// PREPARATION and AUTH
+						apimEnv := apim.Env()
+						cred, err := azidentity.NewDefaultAzureCredential(nil)
+						if err != nil {
+							log.Error().Err(err).Msg("apim azidentity error")
+							os.Exit(-1)
+						}
+
+						apim := apim.APIM{
+							SubscriptionID: apimEnv.SubscriptionID,
+							Location:       apimEnv.Location,
+							Credential:     cred,
+							Context:        context.Background(),
+						}
+
+						if options.ResourceGroup != "" && options.ServiceName != "" {
+							apim.ExportBackendsTemplate(options.ResourceGroup, options.ServiceName, options.FilePath)
+							return
+						}
+						printExCommand("--resource-group/-g, --service-name/-n", true, "apimtool template backend export --resource-group", "myresourcegroup", "--service-name", "myservice")
+					}
+
 					if len(os.Args) > 3 && os.Args[3] == "create" {
 						if options.Environment != "" && options.BackendID != "" && options.URL != "" && options.Protocol != "" {
 							e := engine.Engine{}
@@ -182,10 +222,7 @@ func main() {
 					return
 				}
 			}
-		case "check":
-			//
 		}
-
 	}
 
 	color.New(color.FgHiBlue).Println(`

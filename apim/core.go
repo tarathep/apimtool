@@ -1,7 +1,6 @@
 package apim
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -24,8 +23,9 @@ type Api struct {
 }
 
 type Backend struct {
-	Name string
-	URL  string
+	Name     string
+	URL      string
+	Protocol string
 }
 
 func safePointerString(s *string) string {
@@ -192,7 +192,6 @@ func (a APIM) createOrUpdateBackend(resourceGroup, serviceName, backendID, url, 
 			},
 		},
 		&armapimanagement.BackendClientCreateOrUpdateOptions{})
-
 }
 
 // get backend from APIM Filter pettern {key}={val}
@@ -241,20 +240,51 @@ func (a APIM) getBackends(resourceGroup, serviceName, filter string) ([]Backend,
 
 			//fmt.Println("Backend ID : ", *v.ID)
 			backends = append(backends, Backend{
-				Name: string(*v.Name),
-				URL:  string(*v.Properties.URL),
+				Name:     string(*v.Name),
+				URL:      string(*v.Properties.URL),
+				Protocol: string(*v.Properties.Protocol),
 			})
 		}
 	}
 	return backends, err
 }
 
-func (a APIM) getAPIsBindingBackend(resourceGroup, serviceName, filter string) {
-	backendIDs, err := a.getBackends(resourceGroup, serviceName, filter)
+func (a APIM) getAPIsBindingBackend(resourceGroup, serviceName, filter string) (
+	[]struct {
+		BE   Backend
+		APIs []Api
+	}, error) {
+
+	var backends []struct {
+		BE   Backend
+		APIs []Api
+	}
+
+	getBackends, err := a.getBackends(resourceGroup, serviceName, filter)
+
 	if err != nil {
-		return
+		return []struct {
+			BE   Backend
+			APIs []Api
+		}{}, err
 	}
-	for i, backendID := range backendIDs {
-		fmt.Println(i, backendID)
+	for _, backend := range getBackends {
+		backends = append(backends, struct {
+			BE   Backend
+			APIs []Api
+		}{
+			BE: backend,
+			APIs: func() []Api {
+				//find api this use backend ID or URL
+				//a.getAPIs()
+
+				return []Api{}
+			}(),
+		})
+
 	}
+	return []struct {
+		BE   Backend
+		APIs []Api
+	}{}, nil
 }
