@@ -9,6 +9,8 @@ You could easily use az login in command line to sign in to Azure via your defau
 az login
 ```
 
+List all Backend
+
 ```bash
 go run main.go apim backend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
 ```
@@ -19,7 +21,7 @@ go run main.go apim backend create --resource-group rg-tarathec-poc-az-asse-sbx-
 ```
 
 ```bash
-apimtool parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
+apimtool parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --file-path ./apim-apis-dev/digital-trading/digital-trading.json
 ```
 
 Add backend into backends.template.json and check validate IP target

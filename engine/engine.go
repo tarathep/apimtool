@@ -76,9 +76,10 @@ func loadBackendTemplate(filename string) (models.BackendTemplate, error) {
 }
 
 func (e Engine) validateBackendID(backendTemplate models.BackendTemplate, resourceGroup, serviceName, url string) (bool, string) {
-	backendIdSource := getBackendIDfromURLsourceTemplate(backendTemplate, url)
 
+	backendIdSource := getBackendIDfromURLsourceTemplate(backendTemplate, url)
 	backendIdAPIM, err := e.GetBackendIDfromURL(resourceGroup, serviceName, url)
+
 	if err != nil {
 		return false, ""
 	}
@@ -98,6 +99,7 @@ func getBackendIDfromURLsourceTemplate(backendTemplate models.BackendTemplate, b
 		os.Exit(0)
 	}
 
+	ids := ""
 	for _, resource := range backendTemplate.Resources {
 		id := strings.ReplaceAll(getQuotedString(resource.Name)[1], "/", "")
 
@@ -109,13 +111,11 @@ func getBackendIDfromURLsourceTemplate(backendTemplate models.BackendTemplate, b
 
 		if resource.Properties.URL == backendURL {
 			log.Debug().Str("func", "getBackendIdfromURLsourceTemplate").Msgf("Found ID=" + id)
-			return id
+			ids += id + ","
 		}
 	}
 
-	log.Debug().Str("func", "getBackendIdfromURLsourceTemplate").Msg("Not found")
-
-	return ""
+	return string([]rune(ids)[:len(ids)-1])
 }
 
 func generateXMLApiPolicyHeaders(outputPath string, api models.API, backendID string) error {
@@ -140,7 +140,7 @@ func generateXMLApiPolicyHeaders(outputPath string, api models.API, backendID st
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(outputPath+"/apiPolicyHeader.xml", file, 0644)
+	return os.WriteFile(outputPath+"/apiPolicyHeaders.xml", file, 0644)
 }
 
 func generateConfigYML(outputPath string, api models.API) error {
@@ -166,31 +166,46 @@ func generateConfigYML(outputPath string, api models.API) error {
 		Header string "yaml:\"header\""
 		Query  string "yaml:\"query\""
 	}{"Ocp-Apim-Subscription-Key", "subscription-key"}
-	apiConfig.Tags = api.Tags
+	apiConfig.Tags = func() string {
+		var tags string
+		for i, tag := range api.Tags {
+			if (i + 1) == len(api.Tags) {
+				tags += tag
+			} else {
+				tags += tag + ", "
+			}
+		}
+		return tags
+	}()
 
 	configYML.Apis = append(configYML.Apis, apiConfig)
-	configYML.OutputLocation = "../templates/apis/" + api.Apiname
+	configYML.OutputLocation = "../../templates/apis/" + api.Apiname
 
 	data, err := yaml.Marshal(&configYML)
+
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(outputPath+"/config.yaml", data, 0644)
+	return os.WriteFile(outputPath+"/config.yml", data, 0644)
 }
 
 // Convert Configuration API JSON file to csv, apiPolicyHeader.xml
 func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 
+	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("Parser JSON API to source files\n\n")
+
+	color.New(color.Italic).Println("API ID \t:", apiId, "\n")
+
 	// CHECK PATH ALL OPERATIONS
-	if !checkPaths([]string{"apim-apis/" + env, "sources/", "templates/"}) {
+	if !checkPaths([]string{"apim-apis-" + env, "sources/", "templates/"}) {
 		return
 	}
 
-	pathAPIs := "./apim-apis/" + env + "/" + apiId + "/" + apiId + ".json"
+	pathAPIs := "./apim-apis-" + env + "/" + apiId + "/" + apiId + ".json"
 	pathBackend := "./templates/" + "backends.template" + ".json"
 
-	// LOAD CONFIGURATION FILE {apis/env/apiId.json}
+	// LOAD CONFIGURATION FILE {apim-apis-dev/apiID/apiId.json}
 	api, _ := loadApi(pathAPIs)
 	if len(api.Operations) == 0 {
 		color.New(color.FgYellow).Println("API config file not found")
@@ -213,13 +228,34 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
 	// VALIDATE BACKEND ID IF ALREADY EXIST RETURN BACKEND ID ? CREATE NEW
 	exist, backendId := e.validateBackendID(backendTemplate, resourceGroup, serviceName, api.Policies.BackendURL)
 	if !exist {
-		color.New(color.FgYellow).Println("new backend")
+		color.New(color.FgYellow).Println("Cannot found Backend [" + api.Policies.BackendURL + "] on APIM and backends.template.json")
 		return
 	}
+	color.New(color.FgHiBlack).Print("\nGenerate apiPolicyHeaders.xml Creating : ")
 
-	generateXMLApiPolicyHeaders(outputPath, api, backendId)
-	generateCSV(outputPath, api)
-	generateConfigYML(outputPath, api)
+	//IF BACKEND MORE THAN ONE SELECT FIRST (IN CASE TARGET IP DUPLICATE)
+	if backendIds := strings.Split(backendId, ","); len(backendIds) > 1 {
+		backendId = backendIds[0]
+	}
+	if err := generateXMLApiPolicyHeaders(outputPath, api, backendId); err != nil {
+		color.New(color.FgHiRed).Println(err.Error())
+		os.Exit(-1)
+	}
+	color.New(color.FgHiGreen).Print("Done")
+
+	color.New(color.FgHiBlack).Print("\nGenerate " + apiId + ".csv Creating : ")
+	if err := generateCSV(outputPath, api); err != nil {
+		color.New(color.FgHiRed).Println(err.Error())
+		os.Exit(-1)
+	}
+	color.New(color.FgHiGreen).Print("Done")
+
+	color.New(color.FgHiBlack).Print("\nGenerate config.yml Creating : ")
+	if err := generateConfigYML(outputPath, api); err != nil {
+		color.New(color.FgHiRed).Println(err.Error())
+		os.Exit(-1)
+	}
+	color.New(color.FgHiGreen).Print("Done\n\n")
 }
 
 func (Engine) removeBackendTemplateJsonByID(pathBackend string, backendTemplate models.BackendTemplate, backendID string) error {
@@ -330,7 +366,7 @@ func (e Engine) AddBackendTemplateJSON(env string, backendID string, url string,
 	//Check existing backend or update?
 	if beID := getBackendIDfromURLsourceTemplate(backendTemplate, url); beID != "" {
 		//have exiting backend
-		color.New(color.FgHiYellow).Println(beID, "backend-id already exsit\n")
+		color.New(color.FgHiYellow).Println(beID, "backend-id already exist\n")
 		os.Exit(-1)
 		return
 	}

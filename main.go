@@ -144,6 +144,7 @@ func main() {
 					if len(os.Args) > 3 && os.Args[3] == "api" {
 						if len(os.Args) > 4 && os.Args[4] == "depend" {
 							if len(os.Args) > 5 && os.Args[5] == "list" {
+
 								apim.ListAPIsDependingOnBackend(options.ResourceGroup, options.ServiceName, options.Filter)
 							}
 							if len(os.Args) > 5 && os.Args[5] == "update" {

@@ -274,23 +274,23 @@ func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) 
 }
 
 func (a APIM) GetBackendIDfromURL(resourceGroup, serviceName, url string) (string, error) {
-	BackendIDs := "["
+	BackendIDs := ""
 	backends, err := a.getBackends(resourceGroup, serviceName, "url="+url)
 
 	if err != nil {
-		return "err", err
+		return "", err
 	}
 	for i, backend := range backends {
 		if len(backends) == 1 {
 			return backend.Name, nil
 		}
 		if (i + 1) == len(backends) {
-			BackendIDs += backend.Name + "]"
+			BackendIDs += backend.Name
 		} else {
 			BackendIDs += backend.Name + ","
 		}
 	}
-	return "", nil
+	return BackendIDs, nil
 
 }
 
@@ -325,7 +325,7 @@ func (a APIM) CreateOrUpdateBackend(resourceGroup, serviceName, backendID, url, 
 
 	if beID != "" {
 		//have exiting backend
-		color.New(color.FgHiYellow).Println(beID, "backend-id already exsit\n")
+		color.New(color.FgHiYellow).Println(beID, "backend-id already exist\n")
 		os.Exit(-1)
 		return
 	}

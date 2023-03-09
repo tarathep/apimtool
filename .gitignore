@@ -24,6 +24,6 @@ vendor/
 config.yaml
 sources
 templates
-apim-apis
+apim-apis-dev
 apis
 backends.templates.json

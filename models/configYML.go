@@ -21,5 +21,5 @@ type APIConfig struct {
 		Header string `yaml:"header"`
 		Query  string `yaml:"query"`
 	} `yaml:"subscriptionKeyParameterNames"`
-	Tags []string `yaml:"tags"`
+	Tags string `yaml:"tags"`
 }
