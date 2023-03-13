@@ -191,18 +191,22 @@ func generateConfigYML(outputPath string, api models.API) error {
 }
 
 // Convert Configuration API JSON file to csv, apiPolicyHeader.xml
-func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName string) {
+func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName, filePath string) {
 
 	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("Parser JSON API to source files\n\n")
 
 	color.New(color.Italic).Println("API ID \t:", apiId, "\n")
 
 	// CHECK PATH ALL OPERATIONS
-	if !checkPaths([]string{"apim-apis-" + env, "sources/", "templates/"}) {
+	if !checkPaths([]string{"apim-apis-" + env, "sources/", "templates/"}) && filePath == "" {
 		return
 	}
 
 	pathAPIs := "./apim-apis-" + env + "/" + apiId + "/" + apiId + ".json"
+	if filePath != "" {
+		pathAPIs = filePath
+	}
+
 	pathBackend := "./templates/" + "backends.template" + ".json"
 
 	// LOAD CONFIGURATION FILE {apim-apis-dev/apiID/apiId.json}

@@ -100,12 +100,12 @@ func main() {
 
 				if options.ResourceGroup != "" && options.ServiceName != "" && options.Environment != "" && options.ApiID != "" {
 					//go run main.go parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
-					e.ConfigParser(options.Environment, options.ApiID, options.ResourceGroup, options.ServiceName)
+					e.ConfigParser(options.Environment, options.ApiID, options.ResourceGroup, options.ServiceName, options.FilePath)
 					return
 				}
 
-				printExCommand("--resource-group/-g, --service-name/-n --env --api-id\nthe directories and config files are required: ./apis/dev/{api-id}.json ./apim-dev/sources/ ./apim-dev/templates/backends.template.json", true, "apimtool parse --resource-group", "myresourcegroup", "--service-name", "myservice", "--env", "dev", "--api-id", "api-name-id")
-
+				printExCommand("--resource-group/-g, --service-name/-n --env --api-id\nthe directories and config files are required: ./apis/dev/{api-id}.json ./apim-dev/sources/ ./apim-dev/templates/backends.template.json or use --file-path", true, "apimtool parse --resource-group", "myresourcegroup", "--service-name", "myservice", "--env", "dev", "--api-id", "api-name-id")
+				printExCommand("", false, "apimtool parse --resource-group", "myresourcegroup", "--service-name", "myservice", "--env", "dev", "--api-id", "api-name-id", "--file-path", "./path-to-api/api.json")
 				printLast()
 				return
 			}

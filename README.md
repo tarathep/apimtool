@@ -15,13 +15,14 @@ List all Backend
 go run main.go apim backend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
 ```
 
+Create APIM backend
 
 ```bash
 go run main.go apim backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
 ```
 
 ```bash
-apimtool parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --file-path ./apim-apis-dev/digital-trading/digital-trading.json
+go run main.go parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --file-path ./apim-apis-dev/digital-trading/digital-trading.json
 ```
 
 Add backend into backends.template.json and check validate IP target
