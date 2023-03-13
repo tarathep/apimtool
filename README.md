@@ -2,6 +2,14 @@
 
 Azure API Management Tool To support configuration of Microsoft Azure API Management
 
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tarathep/apimtool)
+![GitHub](https://img.shields.io/github/license/tarathep/ghmgr)
+
+![](https://github.com/tarathep/ghmgr/actions/workflows/autobuild.yaml/badge.svg)
+[![Linux](https://svgshare.com/i/Zhy.svg)](https://svgshare.com/i/Zhy.svg)
+[![macOS](https://svgshare.com/i/ZjP.svg)](https://svgshare.com/i/ZjP.svg)
+[![Windows](https://svgshare.com/i/ZhY.svg)](https://svgshare.com/i/ZhY.svg)
+
 <div align="center"><img src="./demo.png" width="70%"></div>
 
 ## Using Azure CLI to Sign In
