@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/fatih/color"
@@ -104,7 +106,7 @@ func (apim APIM) ListBackend(resourceGroup, serviceName, filterDisplayName, opti
 }
 
 func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, option string) {
-
+	start := time.Now()
 	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List API Management API's\n\n")
 
 	apis, err := apim.getAPIs(resourceGroup, serviceName, filterDisplayName)
@@ -247,6 +249,7 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 
 		}
 	}
+	fmt.Println("\nTime used is ", time.Since(start))
 }
 
 func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) (string, error) {
@@ -429,70 +432,142 @@ func (apim APIM) ExportBackendsTemplate(resourceGroup, serviceName, pathBackend 
 }
 
 func (a APIM) ListAPIsDependingOnBackend(resourceGroup, serviceName, filter string) {
+	start := time.Now()
 	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List API Management API's depending Backend \n\n")
 
-	a.getAPIsBindingBackend(resourceGroup, serviceName, filter)
-	// apis, err := apim.getAPIs(resourceGroup, serviceName, filterDisplayName)
-	// if err != nil {
-	// 	color.New(color.FgRed).Println("Fail to get APIs", err)
-	// 	return
-	// }
+	//LOAD LIST BACKEND ID AND BACKEND URL INTO CACHE MEMMORY
 
-	// for i, api := range apis {
-	// 	color.New(color.FgHiBlack).Print("No : ")
-	// 	fmt.Println(1 + i)
-	// 	color.New(color.FgHiBlack).Print("API NAME : ")
-	// 	fmt.Println(api.Name)
-	// 	color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
-	// 	fmt.Println(api.DisplayName)
-	// 	color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
-	// 	fmt.Println(api.Protocols)
-	// 	color.New(color.FgHiBlack).Print("PATH : ")
-	// 	fmt.Println(api.Path)
-	// 	color.New(color.FgHiBlack).Print("Backend URL : ")
-	// 	fmt.Println(api.BackendURL)
+	//FIND BACKEND-URL LIKE COLLECT INTO BACKEND ID NAME INTO CAHCE MEM
 
-	// 	color.New(color.FgHiBlack).Print("Backend Policy ID : ")
-	// 	backendPolicyID := apim.GetAPIPolicy(resourceGroup, serviceName, api.Name).Inbound.SetBackendService.BackendID
-	// 	fmt.Println(backendPolicyID)
+	//
+	//a.getAPIsBindingBackend(resourceGroup, serviceName, filter)
+	apis, err := a.getAPIs(resourceGroup, serviceName, "")
+	if err != nil {
+		color.New(color.FgRed).Println("Fail to get APIs", err)
+		return
+	}
 
-	// 	color.New(color.FgHiBlack).Print("Backend Policy URL : ")
+	type APIModel struct {
+		No               int
+		APIName          string
+		APIDisplayName   string
+		APIProtocols     []string
+		APIPath          string
+		APIBackendURL    string
+		BackendPolicyID  string
+		BackendPolicyURL string
+		Operation        []Operation
+	}
 
-	// 	backendPolicyURL, err := apim.GetBackendURLfromID(resourceGroup, serviceName, backendPolicyID)
-	// 	if err != nil {
-	// 		color.New(color.FgHiRed).Println("Error", err)
-	// 		return
-	// 	}
-	// 	fmt.Println(backendPolicyURL)
+	var apiModels []APIModel
 
-	// 	color.New(color.FgHiBlack).Print("Operations : \n")
-	// 	operations, err := apim.getOperations(resourceGroup, serviceName, api.Name, "")
-	// 	if err != nil {
-	// 		color.New(color.FgHiRed).Println("Error", err)
-	// 		return
-	// 	}
-	// 	for i, operation := range operations {
-	// 		color.New(color.FgHiWhite).Print("  ", (i + 1), " ")
-	// 		switch operation.Method {
-	// 		case "GET":
-	// 			color.New(color.FgHiBlue).Print(operation.Method, " ")
-	// 		case "POST":
-	// 			color.New(color.FgHiGreen).Print(operation.Method, " ")
-	// 		case "PUT":
-	// 			color.New(color.FgHiYellow).Print(operation.Method, " ")
-	// 		case "DELETE":
-	// 			color.New(color.FgHiRed).Print(operation.Method, " ")
-	// 		case "PATCH":
-	// 			color.New(color.FgHiCyan).Print(operation.Method, " ")
-	// 		default:
-	// 			color.New(color.FgHiBlack).Print(operation.Method, " ")
-	// 		}
-	// 		color.New(color.FgHiWhite).Println(operation.Name, operation.URLTemplate)
+	// Create a WaitGroup to synchronize the Go routines
+	var wg sync.WaitGroup
+	wg.Add(len(apis))
 
-	// 	}
+	for _, api := range apis {
+		go func(api Api) {
+			defer wg.Done()
 
-	// 	color.New(color.FgHiWhite).Println("------------------------------------------------------------")
+			apiModel := func(api Api) APIModel {
+				var model APIModel
+				model.APIName = api.Name
+				model.APIDisplayName = api.DisplayName
+				model.APIProtocols = api.Protocols
+				model.APIPath = api.Path
+				model.APIBackendURL = api.BackendURL
 
-	// }
+				//Create a Channel for GetAPIPolicy
+				c1 := make(chan string)
+
+				go func(a APIM, resourceGroup string, serviceName string, Name string) {
+					c1 <- a.GetAPIPolicy(resourceGroup, serviceName, Name).Inbound.SetBackendService.BackendID
+				}(a, resourceGroup, serviceName, api.Name)
+
+				backendPolicyID := <-c1
+				model.BackendPolicyID = backendPolicyID
+
+				//Create a Channel for GetBackendURLfromID
+				c2 := make(chan string)
+				go func(a APIM, resourceGroup string, serviceName string, backendPolicyID string) {
+					backendPolicyURL, err := a.GetBackendURLfromID(resourceGroup, serviceName, backendPolicyID)
+					if err != nil {
+						color.New(color.FgHiRed).Println("Error", err)
+					}
+					c2 <- backendPolicyURL
+				}(a, resourceGroup, serviceName, backendPolicyID)
+
+				//Create a Channel for Operation
+				model.BackendPolicyURL = <-c2
+
+				c3 := make(chan []Operation)
+				go func(a APIM, resourceGroup string, serviceName string, Name string) {
+					operation, err := a.getOperations(resourceGroup, serviceName, api.Name, "")
+					if err != nil {
+						color.New(color.FgHiRed).Println("Error", err)
+					}
+					c3 <- operation
+				}(a, resourceGroup, serviceName, api.Name)
+
+				model.Operation = <-c3
+
+				return model
+			}(api)
+
+			apiModels = append(apiModels, apiModel)
+		}(api)
+
+	}
+	wg.Wait()
+
+	for i, model := range apiModels {
+		color.New(color.FgHiBlack).Print("No : ")
+		fmt.Println(1 + i)
+		color.New(color.FgHiBlack).Print("API NAME : ")
+		fmt.Println(model.APIName)
+		color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
+		fmt.Println(model.APIDisplayName)
+		color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
+		fmt.Println(model.APIProtocols)
+		color.New(color.FgHiBlack).Print("PATH : ")
+		fmt.Println(model.APIPath)
+		color.New(color.FgHiBlack).Print("Backend URL : ")
+		fmt.Println(model.APIBackendURL)
+
+		color.New(color.FgHiBlack).Print("Backend Policy ID : ")
+
+		fmt.Println(model.BackendPolicyID)
+
+		color.New(color.FgHiBlack).Print("Backend Policy URL : ")
+
+		fmt.Println(model.BackendPolicyURL)
+
+		color.New(color.FgHiBlack).Print("Operations : \n")
+		operations := model.Operation
+
+		for i, operation := range operations {
+			color.New(color.FgHiWhite).Print("  ", (i + 1), " ")
+			switch operation.Method {
+			case "GET":
+				color.New(color.FgHiBlue).Print(operation.Method, " ")
+			case "POST":
+				color.New(color.FgHiGreen).Print(operation.Method, " ")
+			case "PUT":
+				color.New(color.FgHiYellow).Print(operation.Method, " ")
+			case "DELETE":
+				color.New(color.FgHiRed).Print(operation.Method, " ")
+			case "PATCH":
+				color.New(color.FgHiCyan).Print(operation.Method, " ")
+			default:
+				color.New(color.FgHiBlack).Print(operation.Method, " ")
+			}
+			color.New(color.FgHiWhite).Println(operation.Name, operation.URLTemplate)
+
+		}
+
+		color.New(color.FgHiWhite).Println("------------------------------------------------------------")
+	}
+	fmt.Println("\nTime used is ", time.Since(start))
+	//fmt.Println(apiModels)
 
 }

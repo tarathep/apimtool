@@ -1,4 +1,5 @@
 # APIM Tool
+
 Azure API Management Tool
 
 ## Using Azure CLI to Sign In
@@ -15,11 +16,19 @@ List all Backend
 go run main.go apim backend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
 ```
 
+List all API
+
+```bash
+go run main.go apim api list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 -o table
+```
+
 Create APIM backend
 
 ```bash
 go run main.go apim backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
 ```
+
+Parser Config file Json to source templates
 
 ```bash
 go run main.go parse --env dev --api-id digital-trading --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --file-path ./apim-apis-dev/digital-trading/digital-trading.json
