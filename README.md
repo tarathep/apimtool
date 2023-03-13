@@ -1,6 +1,8 @@
 # APIM Tool
 
-Azure API Management Tool
+Azure API Management Tool To support configuration of Microsoft Azure API Management
+
+<div align="center"><img src="./demo.png" width="70%"></div>
 
 ## Using Azure CLI to Sign In
 
@@ -9,6 +11,8 @@ You could easily use az login in command line to sign in to Azure via your defau
 ```bash
 az login
 ```
+
+## Using CLI to
 
 List all Backend
 
