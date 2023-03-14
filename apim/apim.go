@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -20,6 +21,18 @@ type APIM struct {
 	Location       string
 	Credential     *azidentity.DefaultAzureCredential
 	Context        context.Context
+}
+
+type apiModel struct {
+	No               int
+	APIName          string
+	APIDisplayName   string
+	APIProtocols     []string
+	APIPath          string
+	APIBackendURL    string
+	BackendPolicyID  string
+	BackendPolicyURL string
+	Operation        []Operation
 }
 
 func Env() struct {
@@ -188,39 +201,40 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 		}
 	case "list":
 		{
-			for i, api := range apis {
+			err, apiModels := apim.apis(resourceGroup, serviceName, filterDisplayName)
+			if err != nil {
+				return
+			}
+			// Sort by No, keeping original order or equal elements.
+			sort.SliceStable(apiModels, func(i, j int) bool {
+				return apiModels[i].No < apiModels[j].No
+			})
+
+			for i, model := range apiModels {
 				color.New(color.FgHiBlack).Print("No : ")
 				fmt.Println(1 + i)
 				color.New(color.FgHiBlack).Print("API NAME : ")
-				fmt.Println(api.Name)
+				fmt.Println(model.APIName)
 				color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
-				fmt.Println(api.DisplayName)
+				fmt.Println(model.APIDisplayName)
 				color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
-				fmt.Println(api.Protocols)
+				fmt.Println(model.APIProtocols)
 				color.New(color.FgHiBlack).Print("PATH : ")
-				fmt.Println(api.Path)
+				fmt.Println(model.APIPath)
 				color.New(color.FgHiBlack).Print("Backend URL : ")
-				fmt.Println(api.BackendURL)
+				fmt.Println(model.APIBackendURL)
 
 				color.New(color.FgHiBlack).Print("Backend Policy ID : ")
-				backendPolicyID := apim.GetAPIPolicy(resourceGroup, serviceName, api.Name).Inbound.SetBackendService.BackendID
-				fmt.Println(backendPolicyID)
+
+				fmt.Println(model.BackendPolicyID)
 
 				color.New(color.FgHiBlack).Print("Backend Policy URL : ")
 
-				backendPolicyURL, err := apim.GetBackendURLfromID(resourceGroup, serviceName, backendPolicyID)
-				if err != nil {
-					color.New(color.FgHiRed).Println("Error", err)
-					return
-				}
-				fmt.Println(backendPolicyURL)
+				fmt.Println(model.BackendPolicyURL)
 
 				color.New(color.FgHiBlack).Print("Operations : \n")
-				operations, err := apim.getOperations(resourceGroup, serviceName, api.Name, "")
-				if err != nil {
-					color.New(color.FgHiRed).Println("Error", err)
-					return
-				}
+				operations := model.Operation
+
 				for i, operation := range operations {
 					color.New(color.FgHiWhite).Print("  ", (i + 1), " ")
 					switch operation.Method {
@@ -238,18 +252,84 @@ func (apim APIM) ListAPI(resourceGroup, serviceName, filterDisplayName string, o
 						color.New(color.FgHiBlack).Print(operation.Method, " ")
 					}
 					color.New(color.FgHiWhite).Println(operation.Name, operation.URLTemplate)
-
 				}
-
-				//apim.getOperationPolicy(resourceGroup, serviceName, api.Name, "")
-
 				color.New(color.FgHiWhite).Println("------------------------------------------------------------")
-
 			}
 
 		}
 	}
 	fmt.Println("\nTime used is ", time.Since(start))
+}
+
+func (a APIM) apis(resourceGroup, serviceName, filterDisplayName string) (error, []apiModel) {
+	apis, err := a.getAPIs(resourceGroup, serviceName, filterDisplayName)
+	if err != nil {
+		color.New(color.FgRed).Println("Fail to get APIs", err)
+		return err, []apiModel{}
+	}
+
+	var apiModels []apiModel
+
+	// Create a WaitGroup to synchronize the Go routines
+	var wg sync.WaitGroup
+	wg.Add(len(apis))
+
+	for _, api := range apis {
+		go func(api Api) {
+			defer wg.Done()
+
+			apiModel := func(api Api) apiModel {
+				var model apiModel
+				model.No = api.No
+				model.APIName = api.Name
+				model.APIDisplayName = api.DisplayName
+				model.APIProtocols = api.Protocols
+				model.APIPath = api.Path
+				model.APIBackendURL = api.BackendURL
+
+				//Create a Channel for GetAPIPolicy
+				c1 := make(chan string)
+
+				go func(a APIM, resourceGroup string, serviceName string, Name string) {
+					c1 <- a.GetAPIPolicy(resourceGroup, serviceName, Name).Inbound.SetBackendService.BackendID
+				}(a, resourceGroup, serviceName, api.Name)
+
+				backendPolicyID := <-c1
+				model.BackendPolicyID = backendPolicyID
+
+				//Create a Channel for GetBackendURLfromID
+				c2 := make(chan string)
+				go func(a APIM, resourceGroup string, serviceName string, backendPolicyID string) {
+					backendPolicyURL, err := a.GetBackendURLfromID(resourceGroup, serviceName, backendPolicyID)
+					if err != nil {
+						color.New(color.FgHiRed).Println("Error", err)
+					}
+					c2 <- backendPolicyURL
+				}(a, resourceGroup, serviceName, backendPolicyID)
+
+				//Create a Channel for Operation
+				model.BackendPolicyURL = <-c2
+
+				c3 := make(chan []Operation)
+				go func(a APIM, resourceGroup string, serviceName string, Name string) {
+					operation, err := a.getOperations(resourceGroup, serviceName, api.Name, "")
+					if err != nil {
+						color.New(color.FgHiRed).Println("Error", err)
+					}
+					c3 <- operation
+				}(a, resourceGroup, serviceName, api.Name)
+
+				model.Operation = <-c3
+
+				return model
+			}(api)
+
+			apiModels = append(apiModels, apiModel)
+		}(api)
+
+	}
+	wg.Wait()
+	return nil, apiModels
 }
 
 func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) (string, error) {
@@ -273,7 +353,6 @@ func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) 
 		}
 	}
 	return URLs, nil
-
 }
 
 func (a APIM) GetBackendIDfromURL(resourceGroup, serviceName, url string) (string, error) {
@@ -431,7 +510,7 @@ func (apim APIM) ExportBackendsTemplate(resourceGroup, serviceName, pathBackend 
 	color.New(color.FgHiGreen).Println("Done\n")
 }
 
-func (a APIM) ListAPIsDependingOnBackend(resourceGroup, serviceName, filter string) {
+func (a APIM) ListAPIsDependingOnBackend(resourceGroup, serviceName, backendID, url string) {
 	start := time.Now()
 	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("List API Management API's depending Backend \n\n")
 
@@ -441,133 +520,88 @@ func (a APIM) ListAPIsDependingOnBackend(resourceGroup, serviceName, filter stri
 
 	//
 	//a.getAPIsBindingBackend(resourceGroup, serviceName, filter)
-	apis, err := a.getAPIs(resourceGroup, serviceName, "")
+	err, apiModels := a.apis(resourceGroup, serviceName, "")
 	if err != nil {
-		color.New(color.FgRed).Println("Fail to get APIs", err)
 		return
 	}
 
-	type APIModel struct {
-		No               int
-		APIName          string
-		APIDisplayName   string
-		APIProtocols     []string
-		APIPath          string
-		APIBackendURL    string
-		BackendPolicyID  string
-		BackendPolicyURL string
-		Operation        []Operation
+	var (
+		maxApiNameSize, maxDisplayNameSize, maxProtocalSize, maxApiPathSize, maxApiBackendURLSize int
+	)
+
+	if len(apiModels) == 0 {
+		color.New(color.FgHiBlue).Println("Not Found")
+		return
 	}
-
-	var apiModels []APIModel
-
-	// Create a WaitGroup to synchronize the Go routines
-	var wg sync.WaitGroup
-	wg.Add(len(apis))
-
-	for _, api := range apis {
-		go func(api Api) {
-			defer wg.Done()
-
-			apiModel := func(api Api) APIModel {
-				var model APIModel
-				model.APIName = api.Name
-				model.APIDisplayName = api.DisplayName
-				model.APIProtocols = api.Protocols
-				model.APIPath = api.Path
-				model.APIBackendURL = api.BackendURL
-
-				//Create a Channel for GetAPIPolicy
-				c1 := make(chan string)
-
-				go func(a APIM, resourceGroup string, serviceName string, Name string) {
-					c1 <- a.GetAPIPolicy(resourceGroup, serviceName, Name).Inbound.SetBackendService.BackendID
-				}(a, resourceGroup, serviceName, api.Name)
-
-				backendPolicyID := <-c1
-				model.BackendPolicyID = backendPolicyID
-
-				//Create a Channel for GetBackendURLfromID
-				c2 := make(chan string)
-				go func(a APIM, resourceGroup string, serviceName string, backendPolicyID string) {
-					backendPolicyURL, err := a.GetBackendURLfromID(resourceGroup, serviceName, backendPolicyID)
-					if err != nil {
-						color.New(color.FgHiRed).Println("Error", err)
-					}
-					c2 <- backendPolicyURL
-				}(a, resourceGroup, serviceName, backendPolicyID)
-
-				//Create a Channel for Operation
-				model.BackendPolicyURL = <-c2
-
-				c3 := make(chan []Operation)
-				go func(a APIM, resourceGroup string, serviceName string, Name string) {
-					operation, err := a.getOperations(resourceGroup, serviceName, api.Name, "")
-					if err != nil {
-						color.New(color.FgHiRed).Println("Error", err)
-					}
-					c3 <- operation
-				}(a, resourceGroup, serviceName, api.Name)
-
-				model.Operation = <-c3
-
-				return model
-			}(api)
-
-			apiModels = append(apiModels, apiModel)
-		}(api)
-
-	}
-	wg.Wait()
-
-	for i, model := range apiModels {
-		color.New(color.FgHiBlack).Print("No : ")
-		fmt.Println(1 + i)
-		color.New(color.FgHiBlack).Print("API NAME : ")
-		fmt.Println(model.APIName)
-		color.New(color.FgHiBlack).Print("API DISPLAY NAME : ")
-		fmt.Println(model.APIDisplayName)
-		color.New(color.FgHiBlack).Print("PROTOCOL(s) : ")
-		fmt.Println(model.APIProtocols)
-		color.New(color.FgHiBlack).Print("PATH : ")
-		fmt.Println(model.APIPath)
-		color.New(color.FgHiBlack).Print("Backend URL : ")
-		fmt.Println(model.APIBackendURL)
-
-		color.New(color.FgHiBlack).Print("Backend Policy ID : ")
-
-		fmt.Println(model.BackendPolicyID)
-
-		color.New(color.FgHiBlack).Print("Backend Policy URL : ")
-
-		fmt.Println(model.BackendPolicyURL)
-
-		color.New(color.FgHiBlack).Print("Operations : \n")
-		operations := model.Operation
-
-		for i, operation := range operations {
-			color.New(color.FgHiWhite).Print("  ", (i + 1), " ")
-			switch operation.Method {
-			case "GET":
-				color.New(color.FgHiBlue).Print(operation.Method, " ")
-			case "POST":
-				color.New(color.FgHiGreen).Print(operation.Method, " ")
-			case "PUT":
-				color.New(color.FgHiYellow).Print(operation.Method, " ")
-			case "DELETE":
-				color.New(color.FgHiRed).Print(operation.Method, " ")
-			case "PATCH":
-				color.New(color.FgHiCyan).Print(operation.Method, " ")
-			default:
-				color.New(color.FgHiBlack).Print(operation.Method, " ")
-			}
-			color.New(color.FgHiWhite).Println(operation.Name, operation.URLTemplate)
-
+	// find max len values for print
+	for _, api := range apiModels {
+		if len(api.APIName) > maxApiNameSize {
+			maxApiNameSize = len(api.APIName)
 		}
 
-		color.New(color.FgHiWhite).Println("------------------------------------------------------------")
+		if len(api.APIDisplayName) > maxDisplayNameSize {
+			maxDisplayNameSize = len(api.APIDisplayName)
+		}
+
+		maxProtocalSizeT := func() int {
+			ps := ""
+			for _, p := range api.APIProtocols {
+				ps += " " + p
+			}
+			return len(ps)
+		}()
+
+		if maxProtocalSizeT > maxProtocalSize {
+			maxProtocalSize = maxProtocalSizeT
+		}
+
+		if len(api.APIPath) > maxApiPathSize {
+			maxApiPathSize = len(api.APIPath)
+		}
+
+		if len(api.APIBackendURL) > maxApiBackendURLSize {
+			maxApiBackendURLSize = len(api.APIBackendURL)
+		}
 	}
+	if maxApiNameSize < 4 {
+		maxApiNameSize = 4
+	}
+	if maxDisplayNameSize < 11 {
+		maxDisplayNameSize = 11
+	}
+	if maxProtocalSize < 11 {
+		maxProtocalSize = 11
+	}
+	if maxApiPathSize < 4 {
+		maxApiPathSize = 4
+	}
+	if maxApiBackendURLSize < 10 {
+		maxApiBackendURLSize = 10
+	}
+
+	color.New(color.FgHiMagenta).Printf("%*s  %*s  %*s  %*s  %*s  %*s\n", 3, "No.", maxApiNameSize, "NAME", maxDisplayNameSize, "DisplayName", maxProtocalSize, "Protocol(s)", maxApiPathSize, "Path", maxApiBackendURLSize, "BackendURL")
+	i := 0
+	for _, api := range apiModels {
+
+		var print = func() {
+			color.New(color.FgHiWhite).Printf("%*d  %*s  %*s  %*s  %*s  %*s\n", 3, (i + 1), maxApiNameSize, api.APIName, maxDisplayNameSize, api.APIDisplayName, maxProtocalSize, func() string {
+				ps := ""
+				for _, p := range api.APIProtocols {
+					ps += " " + p
+				}
+				return ps
+			}(), maxApiPathSize, api.APIPath, maxApiBackendURLSize, api.APIBackendURL)
+		}
+
+		if backendID != "" && url != "" && api.BackendPolicyID == backendID && api.BackendPolicyURL == url {
+			print()
+		} else if backendID != "" && url == "" && api.BackendPolicyID == backendID {
+			print()
+		} else if backendID == "" && url != "" && api.BackendPolicyURL == url {
+			print()
+		}
+	}
+
 	fmt.Println("\nTime used is ", time.Since(start))
-	//fmt.Println(apiModels)
 
 }

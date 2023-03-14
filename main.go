@@ -144,8 +144,14 @@ func main() {
 					if len(os.Args) > 3 && os.Args[3] == "api" {
 						if len(os.Args) > 4 && os.Args[4] == "depend" {
 							if len(os.Args) > 5 && os.Args[5] == "list" {
+								if (options.ResourceGroup != "" && options.ServiceName != "") && (options.BackendID != "" || options.URL != "") {
+									apim.ListAPIsDependingOnBackend(options.ResourceGroup, options.ServiceName, options.BackendID, options.URL)
+									return
+								}
 
-								apim.ListAPIsDependingOnBackend(options.ResourceGroup, options.ServiceName, options.Filter)
+								printExCommand("--resource-group/-g, --service-name/-n --backend-id or --url", true, "apimtool apim backend api depend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--backend-id", "mybackend-id", "--url", "https://127.0.0.1")
+								printExCommand("", false, "apimtool apim backend api depend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--backend-id", "mybackend-id")
+								printExCommand("", false, "apimtool apim backend api depend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--url", "https://127.0.0.1")
 							}
 							if len(os.Args) > 5 && os.Args[5] == "update" {
 								//UPDATE BACKEND TO APIS

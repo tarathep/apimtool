@@ -15,6 +15,7 @@ type Operation struct {
 }
 
 type Api struct {
+	No          int
 	Name        string
 	DisplayName string
 	Protocols   []string
@@ -136,10 +137,9 @@ func (a APIM) getAPIs(resourceGroup, serviceName, filter string) ([]Api, error) 
 			log.Fatalf("failed to advance page: %v", err)
 		}
 
-		for _, v := range nextResult.Value {
-			_ = v
-
+		for i, v := range nextResult.Value {
 			apis = append(apis, Api{
+				No:          (i + 1),
 				Name:        safePointerString(v.Name),
 				DisplayName: safePointerString(v.Properties.DisplayName),
 				Protocols: func() []string {
