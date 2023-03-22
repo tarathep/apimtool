@@ -122,3 +122,9 @@ Export Backend ARM Template from APIM
 ```bash
 go run main.go template backend export --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
 ```
+
+Create Backend ARM Template and Check Exsiting backend-id
+
+```bash
+go run main.go template backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
+```

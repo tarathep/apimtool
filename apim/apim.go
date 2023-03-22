@@ -40,7 +40,7 @@ func Env() struct {
 	Location       string
 } {
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-	subscriptionID = "24750e68-d6c2-40b7-90f9-f55b5009e909"
+
 	if len(subscriptionID) == 0 {
 		log.Fatal("AZURE_SUBSCRIPTION_ID is not set.")
 	}
@@ -355,6 +355,7 @@ func (a APIM) GetBackendURLfromID(resourceGroup, serviceName, backendID string) 
 	return URLs, nil
 }
 
+// Get Backend ID by URL from APIM
 func (a APIM) GetBackendIDfromURL(resourceGroup, serviceName, url string) (string, error) {
 	BackendIDs := ""
 	backends, err := a.getBackends(resourceGroup, serviceName, "url="+url)
@@ -395,33 +396,34 @@ func (a APIM) CreateOrUpdateBackend(resourceGroup, serviceName, backendID, url, 
 
 	color.New(color.FgHiBlack).Print("\nCreating : ")
 
-	//Check existing backend or update?
+	//Check existing backend using URL from APIM?
 	beID, err := a.GetBackendIDfromURL(resourceGroup, serviceName, url)
 	if err != nil {
-		color.New(color.FgHiRed).Println("ERROR", err)
+		color.New(color.FgHiRed).Print("ERROR", err)
 		os.Exit(-1)
 		return
 	}
 
-	fmt.Println(len(beID))
-
 	if beID != "" {
 		//have exiting backend
-		color.New(color.FgHiYellow).Println(beID, "backend-id already exist\n")
+		color.New(color.FgHiYellow).Print("This URL is using by backend-id (", beID, ") already exist on APIM\n")
 		os.Exit(-1)
 		return
 	}
 
 	result, err := a.createOrUpdateBackend(resourceGroup, serviceName, backendID, url, protocol)
 	if err != nil {
-		color.New(color.FgHiRed).Println("ERROR", err)
+		color.New(color.FgHiRed).Print("ERROR", err)
 		os.Exit(-1)
 		return
 	}
 
 	if safePointerString(result.Name) == backendID && safePointerString(result.Properties.URL) == url {
-		color.New(color.FgHiGreen).Println("Done\n")
+		color.New(color.FgHiGreen).Print("Done\n")
+		return
 	}
+	color.New(color.FgHiRed).Print("ERROR", "Unknow?")
+	os.Exit(-1)
 }
 
 func (apim APIM) ExportBackendsTemplate(resourceGroup, serviceName, pathBackend string) {

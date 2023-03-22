@@ -114,7 +114,9 @@ func getBackendIDfromURLsourceTemplate(backendTemplate models.BackendTemplate, b
 			ids += id + ","
 		}
 	}
-
+	if ids == "" {
+		return ""
+	}
 	return string([]rune(ids)[:len(ids)-1])
 }
 
@@ -262,6 +264,7 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName, filePath st
 	color.New(color.FgHiGreen).Print("Done\n\n")
 }
 
+// Remove in backends.template.json only
 func (Engine) removeBackendTemplateJsonByID(pathBackend string, backendTemplate models.BackendTemplate, backendID string) error {
 	var beTempl models.BackendTemplate
 
@@ -272,8 +275,6 @@ func (Engine) removeBackendTemplateJsonByID(pathBackend string, backendTemplate 
 	for _, res := range backendTemplate.Resources {
 		if !(res.Name == "[concat(parameters('ApimServiceName'), '/"+backendID+"')]") {
 			beTempl.Resources = append(beTempl.Resources, res)
-		} else {
-			fmt.Println(res.Name)
 		}
 	}
 
@@ -350,7 +351,7 @@ func (Engine) addBackendTemplateJSON(pathBackend string, backendTemplate models.
 	return os.WriteFile(pathBackend, file, 0644)
 }
 
-func (e Engine) AddBackendTemplateJSON(env string, backendID string, url string, protocol string) {
+func (e Engine) AddBackendTemplateJSON(backendID, url, protocol string) {
 
 	color.New(color.Italic, color.FgHiBlue, color.Bold).Print("Create a new backend entity in backends.template.json\n\n")
 
@@ -366,24 +367,23 @@ func (e Engine) AddBackendTemplateJSON(env string, backendID string, url string,
 
 	color.New(color.FgHiBlack).Print("\nCreating : ")
 
-	//...
-	//Check existing backend or update?
+	//Check existing backend on templates/backends.template.json?
 	if beID := getBackendIDfromURLsourceTemplate(backendTemplate, url); beID != "" {
 		//have exiting backend
-		color.New(color.FgHiYellow).Println(beID, "backend-id already exist\n")
+		color.New(color.FgHiYellow).Println("Backend URL is using on backend-id (", beID, ") at backends.template.json\n")
 		os.Exit(-1)
 		return
 	}
 
 	if err := e.addBackendTemplateJSON(pathBackend, backendTemplate, backendID, url, protocol); err != nil {
 		color.New(color.FgHiRed).Println("ERROR", err)
-		os.Exit(-1)
 		return
 	}
+
 	color.New(color.FgHiGreen).Println("Done\n")
 }
 
-func (e Engine) DeleteBackendTemplateJSONByID(env string, backendID string) {
+func (e Engine) DeleteBackendTemplateJSONByID(backendID string) {
 
 	color.New(color.Italic, color.FgHiYellow, color.Bold).Print("Delete a backend entity in backends.template.json\n\n")
 

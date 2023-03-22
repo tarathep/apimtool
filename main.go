@@ -170,6 +170,7 @@ func main() {
 						printExCommand("", false, "apimtool apim backend list --resource-group", "myresourcegroup", "--service-name", "myservice", "--filter-display-name", "myfilterdisplay", "--option", "table/list")
 					}
 
+					//Create or Update Backend URL directly to APIM (Not update at backends.template.json)
 					if len(os.Args) > 3 && os.Args[3] == "create" {
 						if options.ResourceGroup != "" && options.ServiceName != "" && options.BackendID != "" {
 							apim.CreateOrUpdateBackend(options.ResourceGroup, options.ServiceName, options.BackendID, options.URL, options.Protocol)
@@ -184,6 +185,7 @@ func main() {
 			}
 		case "template":
 			{
+				//trust
 				if len(os.Args) > 2 && os.Args[2] == "backend" {
 					if len(os.Args) > 3 && os.Args[3] == "export" {
 
@@ -207,23 +209,26 @@ func main() {
 							return
 						}
 						printExCommand("--resource-group/-g, --service-name/-n", true, "apimtool template backend export --resource-group", "myresourcegroup", "--service-name", "myservice")
+						printExCommand("--resource-group/-g, --service-name/-n", false, "apimtool template backend export --resource-group", "myresourcegroup", "--service-name", "myservice", "--file-path", "./templates/")
 					}
 
 					if len(os.Args) > 3 && os.Args[3] == "create" {
-						if options.Environment != "" && options.BackendID != "" && options.URL != "" && options.Protocol != "" {
+						if options.BackendID != "" && options.URL != "" && options.Protocol != "" {
 							e := engine.Engine{}
-							e.AddBackendTemplateJSON(options.Environment, options.BackendID, options.URL, options.Protocol)
+							e.AddBackendTemplateJSON(options.BackendID, options.URL, options.Protocol)
 							return
 						}
-						printExCommand("--env --backend-id --url --protocol {http/soap}\nthe directories and config files are required: ./apim-{env}/templates/backends.template.json", true, "apimtool template backend create", "--env", "dev", "--backend-id", "my-backend-id", "--url", "https://127.0.0.1:8081", "--protocol", "http")
+						printExCommand("--backend-id --url --protocol {http/soap}\nthe directories and config files are required: ./templates/backends.template.json", true, "apimtool template backend create", "--backend-id", "my-backend-id", "--url", "https://127.0.0.1:8081", "--protocol", "http")
 					}
+
+					// bug
 					if len(os.Args) > 3 && os.Args[3] == "delete" {
-						if options.Environment != "" && options.BackendID != "" {
+						if options.BackendID != "" {
 							e := engine.Engine{}
-							e.DeleteBackendTemplateJSONByID(options.Environment, options.BackendID)
+							e.DeleteBackendTemplateJSONByID(options.BackendID)
 							return
 						}
-						printExCommand("--env --backend-id\nthe directories and config files are required: ./apim-{env}/templates/backends.template.json", true, "apimtool template backend delete", "--env", "dev", "--backend-id", "my-backend-id")
+						printExCommand("--env --backend-id\nthe directories and config files are required: ./templates/backends.template.json", true, "apimtool template backend delete", "--backend-id", "my-backend-id")
 					}
 					printLast()
 					return
