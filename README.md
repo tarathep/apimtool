@@ -62,6 +62,24 @@ List all API on Azure API Management.
 apimtool apim api list --resource-group rg-my-resource-group --service-name apim-my-name -o list
 ```
 
+### List APIs Depening on backend
+
+<b>Arguments</b>
+
+```--resource-group``` my resource group from azure
+
+```--service-name``` my service from azure
+
+```--backend-id``` backend-id [table/list]
+
+```--url``` target backend URL
+
+```--protocol``` support 2 types only `{http,soap}`
+
+```bash
+apimtool apim backend api depend list --resource-group rg-my-resource-group --service-name apim-my-name --backend-id mybackend --url https://httpbin.org --protocol {http/soap}
+```
+
 ### Create Backend
 
 Create backend on Azure API Management and check duplication before created.
@@ -105,7 +123,7 @@ apimtool parse --env dev --api-id myapiid --resource-group rg-my-resource-group 
 
 ### Add Backend into ARM Templates
 
-Add backend into `backends.template.json` and check validate IP target
+Add backend into `backends.template.json` and check validate IP target.
 
 <b>Arguments</b>
 
@@ -113,28 +131,25 @@ Add backend into `backends.template.json` and check validate IP target
 
 ```--service-name``` my service from azure
 
-```--env``` Environment
+```--backend-id``` Backend ID on Azure API Manamgement
+
+```bash
+apimtool template backend create --resource-group rg-my-resource-group --service-name apim-my-name --backend-id hello --url https://tarathep.com --protocol http
+```
+
+### Export Backend ARM Template from APIM
+
+Export configuration and create `backends.template.json` from source APIM.
+
+<b>Arguments</b>
+
+```--resource-group``` my resource group from azure
+
+```--service-name``` my service from azure
 
 ```--backend-id``` Backend ID on Azure API Manamgement
 
 ```bash
-apimtool template backend create --env dev --resource-group rg-my-resource-group --service-name apim-my-name --backend-id hello --url https://tarathep.com --protocol http
+apimtool template backend export --resource-group rg-my-resource-group --service-name apim-my-name
 ```
 
-List APIs Depening on backend
-
-```bash
-apimtool apim backend api depend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
-```
-
-Export Backend ARM Template from APIM
-
-```bash
-apimtool template backend export --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
-```
-
-Create Backend ARM Template and Check Exsiting backend-id
-
-```bash
-apimtool template backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
-```
