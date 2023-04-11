@@ -1,6 +1,6 @@
 # APIM Tool
 
-Azure API Management Tool To support configuration of Microsoft Azure API Management
+Azure API Management Tool To support configuration of Microsoft Azure API Management.
 
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tarathep/apimtool)
 ![GitHub](https://img.shields.io/github/license/tarathep/apimtool)
@@ -20,9 +20,9 @@ You could easily use az login in command line to sign in to Azure via your defau
 az login
 ```
 
-## Initialze Environment Variables
+## Initialize Environment Variables
 
-Before to use you must set `Subscription ID` and `Location` to CLI connect to Azure resource.
+Before to use, you must set `Subscription ID` and `Location` to CLI connect to Azure resource.
 
 |Name|Value|
 |--|--|
@@ -34,7 +34,7 @@ Before to use you must set `Subscription ID` and `Location` to CLI connect to Az
 
 ### List Backends
 
-List all Backend from API management
+List of all Backends from API management
 
 <b>Arguments</b>
 
@@ -62,7 +62,7 @@ List all API on Azure API Management.
 apimtool apim api list --resource-group rg-my-resource-group --service-name apim-my-name -o list
 ```
 
-### List APIs Depening on backend
+### List APIs Depending on backend
 
 <b>Arguments</b>
 
@@ -102,7 +102,7 @@ apimtool apim backend create --resource-group rg-my-resource-group --service-nam
 
 ## Parser To Support Source to ARM Template
 
-Parser Config file Json to source templates
+Parser Config file JSON to source templates
 
 <b>Arguments</b>
 
@@ -110,7 +110,7 @@ Parser Config file Json to source templates
 
 ```--service-name``` my service from azure
 
-```--api-id``` API ID on Azure API Manamgement
+```--api-id``` API ID on Azure API Management
 
 ```--file-path``` path to file config
 
@@ -131,7 +131,7 @@ Add backend into `backends.template.json` and check validate IP target.
 
 ```--service-name``` my service from azure
 
-```--backend-id``` Backend ID on Azure API Manamgement
+```--backend-id``` Backend ID on Azure API Management
 
 ```bash
 apimtool template backend create --resource-group rg-my-resource-group --service-name apim-my-name --backend-id hello --url https://tarathep.com --protocol http
@@ -147,9 +147,8 @@ Export configuration and create `backends.template.json` from source APIM.
 
 ```--service-name``` my service from azure
 
-```--backend-id``` Backend ID on Azure API Manamgement
+```--backend-id``` Backend ID on Azure API Management
 
 ```bash
 apimtool template backend export --resource-group rg-my-resource-group --service-name apim-my-name
 ```
-
