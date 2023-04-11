@@ -39,12 +39,15 @@ func Env() struct {
 	SubscriptionID string
 	Location       string
 } {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+	subscriptionID := os.Getenv("APIMTOOL_AZURE_SUBSCRIPTION_ID")
 
 	if len(subscriptionID) == 0 {
-		log.Fatal("AZURE_SUBSCRIPTION_ID is not set.")
+		log.Fatal("APIMTOOL_AZURE_SUBSCRIPTION_ID is not set.")
 	}
-	location := os.Getenv("AZURE_LOCATION") 
+	location := os.Getenv("APIMTOOL_AZURE_LOCATION") 
+	if len(location) ==0{
+		log.Fatal("APIMTOOL_AZURE_LOCATION is not set.")
+	}
 
 	return struct {
 		SubscriptionID string

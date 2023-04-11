@@ -26,8 +26,8 @@ Before to use you must set `Subscription ID` and `Location` to CLI connect to Az
 
 |Name|Value|
 |--|--|
-|AZURE_SUBSCRIPTION_ID|xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx|
-|AZURE_LOCATION|southeastasia|
+|APIMTOOL_AZURE_SUBSCRIPTION_ID|xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx|
+|APIMTOOL_AZURE_LOCATION|southeastasia|
 
 
 ## APIM command directly
