@@ -17,7 +17,7 @@ import (
 	"github.com/tarathep/apimtool/engine"
 )
 
-const version string = "0.0.1"
+const version string = "v1.0.0"
 const label string = `Azure API Management Tool ` + version + `
 Repository : https://github.com/tarathep/apimtool`
 

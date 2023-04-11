@@ -377,6 +377,7 @@ func (e Engine) AddBackendTemplateJSON(backendID, url, protocol string) {
 
 	if err := e.addBackendTemplateJSON(pathBackend, backendTemplate, backendID, url, protocol); err != nil {
 		color.New(color.FgHiRed).Println("ERROR", err)
+		os.Exit(-1)
 		return
 	}
 

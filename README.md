@@ -20,6 +20,16 @@ You could easily use az login in command line to sign in to Azure via your defau
 az login
 ```
 
+## Initialze Environment Variables
+
+Before to use you must set `Subscription ID` and `Location` to CLI connect to Azure resource.
+
+|Name|Value|
+|--|--|
+|AZURE_SUBSCRIPTION_ID|xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx|
+|AZURE_LOCATION|southeastasia|
+
+
 ## APIM command directly
 
 ### List Backends
@@ -114,17 +124,17 @@ apimtool template backend create --env dev --resource-group rg-my-resource-group
 List APIs Depening on backend
 
 ```bash
-go run main.go apim backend api depend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
+apimtool apim backend api depend list --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
 ```
 
 Export Backend ARM Template from APIM
 
 ```bash
-go run main.go template backend export --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
+apimtool template backend export --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003
 ```
 
 Create Backend ARM Template and Check Exsiting backend-id
 
 ```bash
-go run main.go template backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
+apimtool template backend create --resource-group rg-tarathec-poc-az-asse-sbx-001 --service-name apimpocazassesbx003 --backend-id hello --url https://tarathep.com --protocol http
 ```

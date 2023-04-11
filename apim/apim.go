@@ -44,7 +44,7 @@ func Env() struct {
 	if len(subscriptionID) == 0 {
 		log.Fatal("AZURE_SUBSCRIPTION_ID is not set.")
 	}
-	location := "southeastasia"
+	location := os.Getenv("AZURE_LOCATION") 
 
 	return struct {
 		SubscriptionID string
