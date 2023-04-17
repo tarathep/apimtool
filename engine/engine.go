@@ -214,7 +214,6 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName, filePath st
 
 	// LOAD CONFIGURATION FILE {apim-apis-dev/apiID/apiId.json}
 	api, _ := loadApi(pathAPIs)
-	fmt.Println(api.Apiname)
 	if len(api.Operations) == 0 {
 		color.New(color.FgYellow).Println("API config file not found")
 		return
@@ -222,7 +221,6 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName, filePath st
 
 	// // LOAD LIST OF BACKEND IN backends.template.json
 	backendTemplate, _ := loadBackendTemplate(pathBackend)
-	fmt.Println(backendTemplate)
 	if backendTemplate.ContentVersion == "" {
 		color.New(color.FgYellow).Println("backends.template.json not found")
 		log.Logger.Fatal().Msg("backends.template.json not found")
