@@ -17,7 +17,7 @@ import (
 	"github.com/tarathep/apimtool/engine"
 )
 
-const version string = "v1.0.0"
+const version string = "1.0.1"
 const label string = `Azure API Management Tool ` + version + `
 Repository : https://github.com/tarathep/apimtool`
 
@@ -69,7 +69,7 @@ func main() {
 	flags.NewIniParser(parser)
 
 	if options.Version {
-		fmt.Print("apimtool version " + version)
+		fmt.Print("apimtool version " + version + "\n")
 		return
 	}
 
