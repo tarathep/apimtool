@@ -1,6 +1,7 @@
 package models
 
 type API struct {
+	Version  string   `json:"version"`
 	Apiname  string   `json:"apiname"`
 	Env      string   `json:"env"`
 	Tags     []string `json:"tags"`

@@ -24,12 +24,13 @@ type Engine struct {
 }
 
 func loadApi(filename string) (models.API, error) {
-	file, _ := os.ReadFile(filename)
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return models.API{}, err
+	}
 
 	data := models.API{}
-
-	err := json.Unmarshal([]byte(file), &data)
-	if err != nil {
+	if err := json.Unmarshal([]byte(file), &data); err != nil {
 		return models.API{}, err
 	}
 
@@ -199,71 +200,70 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName, filePath st
 
 	color.New(color.Italic).Println("API ID \t:", apiId, "\n")
 
-	fmt.Println(filePath)
+	//CHECK PATH ALL OPERATIONS
+	if !checkPaths([]string{"apim-apis-" + env, "sources/", "templates/"}) && filePath == "" {
+		return
+	}
 
-	// CHECK PATH ALL OPERATIONS
-	// if !checkPaths([]string{"apim-apis-" + env, "sources/", "templates/"}) && filePath == "" {
-	// 	return
-	// }
+	pathAPIs := "./apim-apis-" + env + "/" + apiId + "/" + apiId + ".json"
+	if filePath != "" {
+		pathAPIs = filePath
+	}
 
-	// pathAPIs := "./apim-apis-" + env + "/" + apiId + "/" + apiId + ".json"
-	// if filePath != "" {
-	// 	pathAPIs = filePath
-	// }
+	pathBackend := "./templates/" + "backends.template" + ".json"
 
-	// pathBackend := "./templates/" + "backends.template" + ".json"
-
-	// // LOAD CONFIGURATION FILE {apim-apis-dev/apiID/apiId.json}
-	// api, _ := loadApi(pathAPIs)
-	// if len(api.Operations) == 0 {
-	// 	color.New(color.FgYellow).Println("API config file not found")
-	// 	log.Logger.Warn().Msg("API config file not found")
-	// 	return
-	// }
+	// LOAD CONFIGURATION FILE {apim-apis-dev/apiID/apiId.json}
+	api, _ := loadApi(pathAPIs)
+	fmt.Println(api.Apiname)
+	if len(api.Operations) == 0 {
+		color.New(color.FgYellow).Println("API config file not found")
+		return
+	}
 
 	// // LOAD LIST OF BACKEND IN backends.template.json
-	// backendTemplate, _ := loadBackendTemplate(pathBackend)
-	// if backendTemplate.ContentVersion == "" {
-	// 	color.New(color.FgYellow).Println("backends.template.json not found")
-	// 	log.Logger.Fatal().Msg("backends.template.json not found")
-	// 	return
-	// }
+	backendTemplate, _ := loadBackendTemplate(pathBackend)
+	fmt.Println(backendTemplate)
+	if backendTemplate.ContentVersion == "" {
+		color.New(color.FgYellow).Println("backends.template.json not found")
+		log.Logger.Fatal().Msg("backends.template.json not found")
+		return
+	}
 
-	// // PREPARE OUTPUT DIRECTORY SOURCE WHEN PARSER FILE
-	// outputPath := "./sources/" + api.Apiname
-	// os.Mkdir(outputPath, 0755)
+	// PREPARE OUTPUT DIRECTORY SOURCE WHEN PARSER FILE
+	outputPath := "./sources/" + api.Apiname
+	os.Mkdir(outputPath, 0755)
 
-	// // VALIDATE BACKEND ID IF ALREADY EXIST RETURN BACKEND ID ? CREATE NEW
-	// exist, backendId := e.validateBackendID(backendTemplate, resourceGroup, serviceName, api.Policies.BackendURL)
-	// if !exist {
-	// 	color.New(color.FgYellow).Println("Cannot found Backend [" + api.Policies.BackendURL + "] on APIM and backends.template.json")
-	// 	return
-	// }
-	// color.New(color.FgHiBlack).Print("\nGenerate apiPolicyHeaders.xml Creating : ")
+	// VALIDATE BACKEND ID IF ALREADY EXIST RETURN BACKEND ID ? CREATE NEW
+	exist, backendId := e.validateBackendID(backendTemplate, resourceGroup, serviceName, api.Policies.BackendURL)
+	if !exist {
+		color.New(color.FgYellow).Println("Cannot found Backend [" + api.Policies.BackendURL + "] on APIM and backends.template.json")
+		return
+	}
+	color.New(color.FgHiBlack).Print("\nGenerate apiPolicyHeaders.xml Creating : ")
 
-	// //IF BACKEND MORE THAN ONE SELECT FIRST (IN CASE TARGET IP DUPLICATE)
-	// if backendIds := strings.Split(backendId, ","); len(backendIds) > 1 {
-	// 	backendId = backendIds[0]
-	// }
-	// if err := generateXMLApiPolicyHeaders(outputPath, api, backendId); err != nil {
-	// 	color.New(color.FgHiRed).Println(err.Error())
-	// 	os.Exit(-1)
-	// }
-	// color.New(color.FgHiGreen).Print("Done")
+	//IF BACKEND MORE THAN ONE SELECT FIRST (IN CASE TARGET IP DUPLICATE)
+	if backendIds := strings.Split(backendId, ","); len(backendIds) > 1 {
+		backendId = backendIds[0]
+	}
+	if err := generateXMLApiPolicyHeaders(outputPath, api, backendId); err != nil {
+		color.New(color.FgHiRed).Println(err.Error())
+		os.Exit(-1)
+	}
+	color.New(color.FgHiGreen).Print("Done")
 
-	// color.New(color.FgHiBlack).Print("\nGenerate " + apiId + ".csv Creating : ")
-	// if err := generateCSV(outputPath, api); err != nil {
-	// 	color.New(color.FgHiRed).Println(err.Error())
-	// 	os.Exit(-1)
-	// }
-	// color.New(color.FgHiGreen).Print("Done")
+	color.New(color.FgHiBlack).Print("\nGenerate " + apiId + ".csv Creating : ")
+	if err := generateCSV(outputPath, api); err != nil {
+		color.New(color.FgHiRed).Println(err.Error())
+		os.Exit(-1)
+	}
+	color.New(color.FgHiGreen).Print("Done")
 
-	// color.New(color.FgHiBlack).Print("\nGenerate config.yml Creating : ")
-	// if err := generateConfigYML(outputPath, api); err != nil {
-	// 	color.New(color.FgHiRed).Println(err.Error())
-	// 	os.Exit(-1)
-	// }
-	// color.New(color.FgHiGreen).Print("Done\n\n")
+	color.New(color.FgHiBlack).Print("\nGenerate config.yml Creating : ")
+	if err := generateConfigYML(outputPath, api); err != nil {
+		color.New(color.FgHiRed).Println(err.Error())
+		os.Exit(-1)
+	}
+	color.New(color.FgHiGreen).Print("Done\n\n")
 }
 
 // Remove in backends.template.json only
