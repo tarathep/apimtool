@@ -234,8 +234,8 @@ func (e Engine) ConfigParser(env, apiId, resourceGroup, serviceName, filePath st
 	// VALIDATE BACKEND ID IF ALREADY EXIST RETURN BACKEND ID ? CREATE NEW
 	exist, backendId := e.validateBackendID(backendTemplate, resourceGroup, serviceName, api.Policies.BackendURL)
 	if !exist {
-		color.New(color.FgYellow).Println("Cannot found Backend [" + api.Policies.BackendURL + "] on APIM and backends.template.json")
-		return
+		color.New(color.FgYellow).Println("Cannot find Backend [" + api.Policies.BackendURL + "] on APIM and backends.template.json")
+		os.Exit(-1)
 	}
 	color.New(color.FgHiBlack).Print("\nGenerate apiPolicyHeaders.xml Creating : ")
 
